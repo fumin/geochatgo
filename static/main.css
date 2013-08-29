@@ -1,0 +1,68 @@
+@-webkit-keyframes newchat-animation {
+  0% { font-size: 200%; width: 200px; color: red; }
+  100% { font-size: 100%; width: 100px; color: black; }
+}
+
+@keyframes newchat-animation {
+  0% { font-size: 200%; width: 200px;  color: red; }
+  100% { font-size: 100%; width: 100px; color: black; }
+}
+
+.newchat {
+  -webkit-animation: newchat-animation 5s;
+  -moz-animation: newchat-animation 5s;
+  -o-animation: newchat-animation 5s;  
+  animation: newchat-animation 5s;
+  
+  width: 100%;
+}
+
+
+/* set broadcast radius slider invisible; should be no use for users. */
+.slider {
+  display: none;
+  margin: 0 auto;
+}
+
+/* Position for message container */
+.messagebox{
+  padding: 0% 20%;
+  width: 100%; 
+  position: absolute;
+  top: 10px;       
+  font-size: 24px;
+}
+
+#screen_name {
+  width: 100%;
+}
+
+#msg {
+  color: black;
+  width: 100%;
+  text-align: center;
+  box-shadow: 4px 4px 1px #888888;
+} 
+::-webkit-input-placeholder { /* WebKit browsers */
+  color: #9A9A9A;
+}
+:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+  color: #9A9A9A;
+}
+::-moz-placeholder { /* Mozilla Firefox 19+ */
+  color: #9A9A9A;
+}
+:-ms-input-placeholder { /* Internet Explorer 10+ */
+  color: #9A9A9A;
+}
+
+.btn {
+  display: none;
+}
+
+.msg-history {
+  font-size: 20px;
+  width: 120px;
+  text-align: center;
+  margin-left: -60px;
+}

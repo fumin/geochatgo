@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+
+[ -d $OPENSHIFT_DATA_DIR/go ] ||
+  curl http://go.googlecode.com/files/go.go1.linux-amd64.tar.gz |
+  tar xvf - -C $OPENSHIFT_DATA_DIR
+
+export GOROOT=$OPENSHIFT_DATA_DIR/go
+export GOPATH=$OPENSHIFT_DATA_DIR/build
+export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+
+rm -rf $GOPATH 2>/dev/null
+mkdir -p $GOPATH/src
+cp -r $OPENSHIFT_REPO_DIR/ $GOPATH/src
+go get $OPENSHIFT_APP_NAME/...

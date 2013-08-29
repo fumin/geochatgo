@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+export GOROOT=$OPENSHIFT_DATA_DIR/go
+export GOPATH=$OPENSHIFT_DATA_DIR/build
+export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+
+nohup $OPENSHIFT_APP_NAME > $OPENSHIFT_DIY_LOG_DIR/$OPENSHIFT_APP_NAME.log 2>&1 </dev/null &
+echo $! > $OPENSHIFT_DATA_DIR/$OPENSHIFT_APP_NAME.pid
