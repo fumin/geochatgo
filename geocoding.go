@@ -3,8 +3,8 @@ package geochat
 import "fmt"
 
 type LatLng struct {
-  Latitude float32
-  Longitude float32
+  Latitude float64
+  Longitude float64
 }
 
 // Accuracy of different Geohash precision levels
@@ -31,9 +31,9 @@ func LatLngToInt(p LatLng, precision int) uint64 {
     panic(fmt.Sprintf("Max precision exceeded: %d", numberOfZeroPaddingBits))
   }
 
-  latrange := [2]float32{-90, 90}
-  lngrange := [2]float32{-180, 180}
-  var mid float32 = 0
+  latrange := [2]float64{-90, 90}
+  lngrange := [2]float64{-180, 180}
+  var mid float64 = 0
   var n uint64 = 0
 
   for i := 0; i != precision; i++ {
