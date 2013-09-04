@@ -30,19 +30,7 @@ func initConfig() {
   redisPool := &redis.Pool{
     MaxIdle: 3,
     IdleTimeout: 240 * time.Second,
-    Dial: func () (redis.Conn, error) {
-      c, err := redis.Dial("tcp", redisServer)
-      if err != nil {
-        return nil, err
-      }
-      if redisPassword != "" {
-        if _, err := c.Do("AUTH", redisPassword); err != nil {
-          c.Close()
-          return nil, err
-        }
-      }
-      return c, err
-    },
+    Dial: NewRedisConn,
     TestOnBorrow: func(c redis.Conn, t time.Time) error {
       _, err := c.Do("PING")
       return err
@@ -60,11 +48,40 @@ func initConfig() {
   if err != nil { panic(err) }
 }
 
-// Redis keys
-const rediskeyGeo = "geo"
-func rediskeyTileChatlog(z int, x int, y int) string {
-  return fmt.Sprintf("tile_chatlog:%d:%d:%d", x, y, z)
+func NewRedisConn() (redis.Conn, error) {
+  c, err := redis.Dial("tcp", redisServer)
+  if err != nil {
+    return nil, err
+  }
+  if redisPassword != "" {
+    if _, err := c.Do("AUTH", redisPassword); err != nil {
+      c.Close()
+      return nil, err
+    }
+  }
+  return c
 }
+
+func NewRedisSubscriber(c redis.Conn, channel string) chan interface{} {
+  sc := redis.PubSubConn{c}
+  sc.Subscribe(channel)
+  ch := make(chan interface{}, 32)
+  go func() {
+    for {
+      v := sc.Receive()
+      select {
+      case ch <- v:
+      default:
+      }
+      _, ok := v.(error); if ok { return }
+    }
+  }()
+  return ch
+}
+
+// Redis keys/prefixes
+const rediskeyGeo = "geo"
+const rediskeyTileChatlog = "tile_chatlog"
 
 // Rtree keys
 const rtreekeyUser = "user"

@@ -59,3 +59,43 @@ func jsonResp(w http.ResponseWriter, o map[string]interface{}) {
   }
   w.Write(b)
 }
+
+const SSEHeatbeat = "heartbeat"
+
+type Sse struct {
+  w http.ResponseWriter
+  Ticker *time.Ticker
+  ConnClosed chan bool
+}
+
+func NewServerSideEventWriter(w http.ResponseWriter) Sse {
+  headers := w.Header()
+  headers.Set("Content-Type", "text/event-stream")
+  headers.Set("Cache-Control", "no-cache")
+  headers.Set("Connection", "keep-alive")
+
+  sse := Sse{w, time.NewTicker(60 * time.Second), make(chan bool, 1)}
+  go func() {
+    for range ticker.C {
+      err := sse.EventWrite(SSEHeatbeat, make([]byte, 0))
+      if err != nil {
+        sse.ConnClosed <- true
+        return
+      }
+    }
+  }()
+  return sse
+}
+
+func (sse Sse) Write(b []byte) error {
+  _, err := sse.w.Write([]byte("data: ")); if err != nil { return err }
+  _, err = sse.w.Write(b); if err != nil { return err }
+  _, err = sse.w.Write([]byte("\n\n")); return err
+}
+
+func (sse Sse) EventWrite(event string, b []byte) error {
+  _, err := sse.w.Write([]byte("event: ")); if err != nil { return err }
+  _, err = sse.w.Write([]byte(event)); if err != nil { return err }
+  _, err = sse.w.Write([]byte("\n")); if err != nil { return err }
+  return sse.Write(b)
+}

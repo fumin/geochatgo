@@ -7,6 +7,7 @@ import (
   "net/http"
   "regexp"
   "time"
+  "github.com/golang/glog"
 )
 
 func init() {
@@ -26,11 +27,60 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func stream(w http.ResponseWriter, r *http.Request) {
+  west, err := requiredFloatParam("west", r, w); if err != nil { return }
+  south, err := requiredFloatParam("south", r, w); if err != nil { return }
+  east, err := requiredFloatParam("east", r, w); if err != nil { return }
+  north, err := requiredFolatParam("north", r, w); if err != nil { return }
+  username := randByteSlice()
+
+  // Subscribe to username in Redis
+  c, err := NewRedisConn()
+  if err != nil {
+    glog.Warningf("%v", err)
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+  }
+  defer c.Close()
+  subscriber := NewRedisSubscriber(c, string(username))
+
+  // Record client's map border
+  err = rtreeClient.RtreeInsert(rtreekeyUser, username,
+                                []float64{west, south}, []float64{east, north})
+  if err != nil {
+    glog.Warningf("%v", err)
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+  }
+  defer func() {
+    err = rtreeClient.RtreeDelete(rtreekeyUser, username)
+    if err != nil { glog.Errorf("%v", err) }
+  }()
+
+  // Inform client about her/his username
+  sse := NewServerSideEventWriter(w)
+  err = sse.EventWrite("username", username) if err != nil { return }
+
+  L:
+  for {
+    select {
+    case msg <- subscriber:
+      switch v := msg.(type) {
+      case redis.Message:
+        sse.Write(v.Data)
+      case error:
+        break L
+      }
+    case <- sse.ConnClosed:
+      glog.Infof("Closing %v", username)
+      break L
+    }
+  }
+}
 
 func say(w http.ResponseWriter, r *http.Request) {
-  msg, err := requiredStringParam("msg", r, w); if err == nil { return }
-  lat, err := requiredFloatParam("latitude", r, w); if err == nil { return }
-  lng, err := requiredFloatParam("longitude", r, w); if err == nil { return }
+  msg, err := requiredStringParam("msg", r, w); if err != nil { return }
+  lat, err := requiredFloatParam("latitude", r, w); if err != nil { return }
+  lng, err := requiredFloatParam("longitude", r, w); if err != nil { return }
   data := map[string]interface{}{
     "msg": msg,
     "created_at": time.Now().Unix(),
@@ -41,18 +91,24 @@ func say(w http.ResponseWriter, r *http.Request) {
   defer conn.Close()
 
   // Store the message into the chatlogs.
-  maptileStore(data, conn)
+  err = maptileStore(rediskeyTileChatlog, data, conn)
+  if err != nil {
+    glog.Warningf("%v", err)
+  }
 
   // Broadcast message to others
   b, _ := json.Marshal(data)
-  neighbors, err := rtreeClient.RtreeNearestNeighbors(rtreekeyUser, 100, []float64{lat, lng})
+  neighbors, err := rtreeClient.RtreeNearestNeighbors(
+                      rtreekeyUser, 100, []float64{lat, lng})
   if err != nil {
+    glog.Warningf("%v", err)
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
   for _, neighbor := range neighbors {
     err = conn.Send("PUBLISH", neighbor, b)
     if err != nil {
+      glog.Warningf("%v", err)
       http.Error(w, err.Error(), http.StatusInternalServerError)
       return
     }
@@ -61,6 +117,7 @@ func say(w http.ResponseWriter, r *http.Request) {
   for _, _ = range neighbors {
     _, err := conn.Receive()
     if err != nil {
+      glog.Warningf("%v", err)
       http.Error(w, err.Error(), http.StatusInternalServerError)
       return
     }

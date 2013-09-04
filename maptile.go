@@ -25,7 +25,8 @@ const MaxZoom = 15
 //   ...
 //   tile_chatlog:15:27434:14012
 //
-func maptileStore(obj map[string]interface{}, conn redis.Conn) error {
+func maptileStore(keyPrefix string, obj map[string]interface{},
+                  conn redis.Conn) error {
   latitude, ok := obj["latitude"].(float64)
   if !ok { return errors.New(fmt.Sprintf("No latitude in %v", obj)) }
   longitude, ok := obj["longitude"].(float64)
@@ -36,7 +37,7 @@ func maptileStore(obj map[string]interface{}, conn redis.Conn) error {
 
   for z := 1; z <= MaxZoom; z++ {
     x, y := LatLngToTile(z, p)
-    redisKey := rediskeyTileChatlog(z, x, y)
+    redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, x, y, z)
     err = conn.Send("LPUSH", redisKey, data)
     if err != nil { return err }
     err = conn.Send("LTRIM", redisKey, 0, 499)
@@ -51,9 +52,9 @@ func maptileStore(obj map[string]interface{}, conn redis.Conn) error {
   return nil
 }
 
-func maptileRead(z int, x int, y int,
-             offset int, limit int, conn redis.Conn) ([]string, error) {
-  redisKey := rediskeyTileChatlog(z, x, y)
+func maptileRead(keyPrefix string, z int, x int, y int,
+                 offset int, limit int, conn redis.Conn) ([]string, error) {
+  redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, x, y, z)
   v, err := redis.Strings(conn.Do("LRANGE", redisKey, offset, limit))
   if err != nil {
     return make([]string, 0), err
