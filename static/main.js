@@ -123,14 +123,17 @@ navigator.geolocation.watchPosition(function(position){
 
   // Routine work on every location change: update circle and report location
   broadcastCircle.setLatLng(new L.LatLng(g_latitude, g_longitude));
-  if (typeof g_username == "undefined") { return; }
-  jQuery.post("report_location",
-              { username: g_username,
-                latitude: g_latitude, longitude: g_longitude },
-              function(data){
-    console.log(data);
-  });
   
 }); // navigator.geolocation.watchPosition
+
+map.on('moveend', debounce(function(e) {
+  if (typeof g_username == "undefined") { return; }
+  mapBounds = map.getBounds(); // in latitude and longitude
+  jQuery.post("update_mapbounds",
+              { username: g_username,
+                west: mapBounds.getWest(), south: mapBounds.getSouth(),
+                east: mapBounds.getEast(), north: mapBounds.getNorth(), },
+              function(data){ console.log("update_mapbounds: " + data); });
+}, 5000));
 
 }); // $(document).ready

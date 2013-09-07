@@ -1,10 +1,10 @@
 package main
 
 import (
-  "net/http"
-  _ "geochat"
+	_ "geochat"
+	"net/http"
 )
 
 func main() {
-  http.ListenAndServe(":3000", nil)
+	http.ListenAndServe(":3000", nil)
 }
