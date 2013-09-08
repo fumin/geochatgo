@@ -49,8 +49,8 @@ $("#say_form").submit(function(){
   markerId = Math.floor(Math.random() * 1000000) + "";
   data["markerId"] = markerId;
   data["created_at"] = Date.now() / 1000; // in seconds
-  var dummyMarker = markers.addChat(data);
-  var p = map.latLngToContainerPoint(new L.LatLng(g_latitude, g_longitude));
+  var dummyMarker = g_map.markers.addChat(data);
+  var p = g_map.latLngToContainerPoint(new L.LatLng(g_latitude, g_longitude));
   document.getElementById("msg").placeholder ="";
   // Do the animation
   $("<div>", {
@@ -77,9 +77,9 @@ $("#say_form").submit(function(){
       function(){ // Animation has completed
         // Create the illusion that the chat we just typed in has
         // fit into the slot by removing the dummyMaker and adding the real
-        markers.removeLayer(dummyMarker);
+        g_map.markers.removeLayer(dummyMarker);
         delete data.markerId;
-        markers.addChat(data);
+        g_map.markers.addChat(data);
 
         document.getElementById("msg").placeholder ="Say something to the world?";
         $(this).remove();

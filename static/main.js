@@ -1,14 +1,14 @@
 $(document).ready(function() {
 
-var map = L.map("map");
+g_map = L.map("map");
 L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/256/{z}/{x}/{y}.png', {
   maxZoom: 18,
   attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
-}).addTo(map);
-L.control.scale().addTo(map);
+}).addTo(g_map);
+L.control.scale().addTo(g_map);
 // Initialize the broadcast circle with an arbitrary position.
 // We'll update it later when we have location information.
-var broadcastCircle = L.circle([45, 45], 0).addTo(map);
+var broadcastCircle = L.circle([45, 45], 0).addTo(g_map);
 
 var markers = new L.MarkerClusterGroup({
   zoomToBoundsOnClick: false,
@@ -47,7 +47,8 @@ var markers = new L.MarkerClusterGroup({
     })
   },
 });
-map.addLayer(markers);
+g_map.addLayer(markers);
+g_map["markers"] = markers;
 
 // `addChat` is the helper that we should ALWAYS use to add a marker
 markers["addChat"] = function(datum) {
@@ -67,11 +68,11 @@ var chatlogLayer = L.ajaxTileLayer("/chatlogs/{z}/{x}/{y}.json", {
       markers.addChat(data[i]);
     }
   },
-}).addTo(map);
-map.on('viewreset', function(e) { // called upon zoom level change
+}).addTo(g_map);
+g_map.on('viewreset', function(e) { // called upon zoom level change
   // Since the data we want to present is probably different at different
   // zoom levels, clear all data belonging to the previous zoom level.
-  if (map.getZoom() <= chatlogLayer.options.maxZoom) {
+  if (g_map.getZoom() <= chatlogLayer.options.maxZoom) {
     markers.clearLayers();
   }
 });
@@ -95,7 +96,7 @@ navigator.geolocation.watchPosition(function(position){
 
   if (typeof g_source == "undefined") {
     // Initialize map
-    map.setView([g_latitude, g_longitude], 13);
+    g_map.setView([g_latitude, g_longitude], 13);
 
     // Prepare broadcast radius slider
     broadcastCircle.setLatLng(new L.LatLng(g_latitude, g_longitude));
@@ -105,7 +106,7 @@ navigator.geolocation.watchPosition(function(position){
     //});
 
     // Create streaming event source
-    mapBounds = map.getBounds(); // in latitude and longitude
+    mapBounds = g_map.getBounds(); // in latitude and longitude
     var path = "stream?west=" + mapBounds.getWest() +
                  "&south=" + mapBounds.getSouth() +
                  "&east="  + mapBounds.getEast() +
@@ -126,9 +127,9 @@ navigator.geolocation.watchPosition(function(position){
   
 }); // navigator.geolocation.watchPosition
 
-map.on('moveend', debounce(function(e) {
+g_map.on('moveend', debounce(function(e) {
   if (typeof g_username == "undefined") { return; }
-  mapBounds = map.getBounds(); // in latitude and longitude
+  mapBounds = g_map.getBounds(); // in latitude and longitude
   jQuery.post("update_mapbounds",
               { username: g_username,
                 west: mapBounds.getWest(), south: mapBounds.getSouth(),

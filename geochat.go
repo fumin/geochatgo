@@ -102,12 +102,11 @@ L:
 		case msg := <-subscriber:
 			switch v := msg.(type) {
 			case redis.Message:
-				sse.Write(v.Data)
+				sse.EventWrite("custom", v.Data)
 			case error:
 				break L
 			}
 		case <-sse.ConnClosed:
-			glog.Infof("Closing %v", username)
 			break L
 		}
 	}
@@ -151,6 +150,9 @@ func say(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, neighbor := range neighbors {
+		if neighbor == r.FormValue("username") {
+			continue
+		}
 		err = conn.Send("PUBLISH", neighbor, b)
 		if err != nil {
 			glog.Warningf("%v", err)
@@ -159,7 +161,10 @@ func say(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	conn.Flush()
-	for _, _ = range neighbors {
+	for _, neighbor := range neighbors {
+		if neighbor == r.FormValue("username") {
+			continue
+		}
 		_, err := conn.Receive()
 		if err != nil {
 			glog.Warningf("%v", err)
@@ -174,9 +179,9 @@ func say(w http.ResponseWriter, r *http.Request) {
 func chatlogs(w http.ResponseWriter, r *http.Request) {
 	re := regexp.MustCompile(`/(\d+)/(\d+)/(\d+)`)
 	matches := re.FindStringSubmatch(r.URL.Path)
-	x, _ := strconv.Atoi(matches[1])
-	y, _ := strconv.Atoi(matches[2])
-	z, _ := strconv.Atoi(matches[3])
+	z, _ := strconv.Atoi(matches[1])
+	x, _ := strconv.Atoi(matches[2])
+	y, _ := strconv.Atoi(matches[3])
 	conn := redisPool.Get()
 	defer conn.Close()
 

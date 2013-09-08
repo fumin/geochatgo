@@ -2,4 +2,4 @@ Geochat in Go
 -------------
 
 ## run server
-go run wiki.go
+`go install geochat/geochat; $GOPATH/bin/geochat -logtostderr=true -stderrthreshold=INFO 2>&1`

@@ -43,7 +43,7 @@ func maptileStore(keyPrefix string, obj map[string]interface{},
 
 	for z := 1; z <= MaxZoom; z++ {
 		x, y := LatLngToTile(z, p)
-		redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, x, y, z)
+		redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, z, x, y)
 		err = conn.Send("LPUSH", redisKey, data)
 		if err != nil {
 			return err
@@ -68,7 +68,7 @@ func maptileStore(keyPrefix string, obj map[string]interface{},
 
 func maptileRead(keyPrefix string, z int, x int, y int,
 	offset int, limit int, conn redis.Conn) ([]string, error) {
-	redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, x, y, z)
+	redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, z, x, y)
 	v, err := redis.Strings(conn.Do("LRANGE", redisKey, offset, limit))
 	if err != nil {
 		return make([]string, 0), err

@@ -3,7 +3,6 @@ package geochat
 import (
 	"github.com/fumin/rtree"
 	"github.com/garyburd/redigo/redis"
-	"github.com/golang/glog"
 	"os"
 	"time"
 )
@@ -82,7 +81,6 @@ func NewRedisSubscriber(c redis.Conn, channel string) chan interface{} {
 
 			_, is_error := v.(error)
 			if is_error {
-				glog.Infof("Closing Redis channel %v", channel)
 				return
 			}
 		}

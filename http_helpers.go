@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/golang/glog"
 	"net/http"
 	"strconv"
 	"time"
@@ -82,7 +81,6 @@ func NewServerSideEventWriter(w http.ResponseWriter) Sse {
 			err := sse.EventWrite(SSEHeatbeat, make([]byte, 0))
 			if err != nil {
 				sse.ConnClosed <- true
-				glog.Infof("Closing SSE...")
 				return
 			}
 		}
@@ -100,6 +98,9 @@ func (sse Sse) Write(b []byte) error {
 		return err
 	}
 	_, err = sse.w.Write([]byte("\n\n"))
+	if f, ok := sse.w.(http.Flusher); ok {
+		f.Flush()
+	}
 	return err
 }
 
