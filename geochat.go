@@ -2,7 +2,7 @@ package geochat
 
 import (
 	"encoding/json"
-  "errors"
+	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"github.com/golang/glog"
@@ -30,10 +30,10 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-  west, south, east, north, err := requiredLatLngBoundsParam(r, w)
-  if err != nil {
-    return
-  }
+	west, south, east, north, err := requiredLatLngBoundsParam(r, w)
+	if err != nil {
+		return
+	}
 
 	// The presence of a user should be handled solely by
 	// the EventSource endpoint "/stream". Therefore we "update",
@@ -50,21 +50,21 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(LatLngToInt(LatLng{12, 12}, 25))
+	// fmt.Println(LatLngToInt(LatLng{12, 12}, 25))
 	t, _ := template.ParseFiles("tmpl/index.html")
 	t.Execute(w, nil)
 }
 
 func stream(w http.ResponseWriter, r *http.Request) {
-  west, south, east, north, err := requiredLatLngBoundsParam(r, w)
-  if err != nil {
-    return
-  }
-	username := randByteSlice()
+	west, south, east, north, err := requiredLatLngBoundsParam(r, w)
+	if err != nil {
+		return
+	}
+	username := string(randByteSlice())
 
 	// We create a new record in Rtree to store a user's map bounds, and
 	// delete that record when the EventSource connection is lost.
-	err = rtreeClient.RtreeInsert(rtreekeyUser, string(username),
+	err = rtreeClient.RtreeInsert(rtreekeyUser, username,
 		[]float64{west, south}, []float64{east, north})
 	if err != nil {
 		glog.Warningf("%v", err)
@@ -72,7 +72,7 @@ func stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() {
-		err = rtreeClient.RtreeDelete(rtreekeyUser, string(username))
+		err = rtreeClient.RtreeDelete(rtreekeyUser, username)
 		if err != nil {
 			glog.Errorf("%v", err)
 		}
@@ -86,12 +86,12 @@ func stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer c.Close()
-	subscriber := NewRedisSubscriber(c, string(username))
+	subscriber := NewRedisSubscriber(c, username)
 
 	// Inform client what her/his username is. Throughout the entire session,
 	// we'll use this string as the identifier of that user.
 	sse := NewServerSideEventWriter(w)
-	err = sse.EventWrite("username", username)
+	err = sse.EventWrite("username", []byte(username))
 	if err != nil {
 		return
 	}
@@ -204,30 +204,30 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func requiredLatLngBoundsParam(r *http.Request, w http.ResponseWriter) (float64, float64, float64, float64, error) {
-  west, err := requiredFloatParam("west", r, w)
-  if err != nil {
-    return -200, -200, -200, -200, err
-  }
-  south, err := requiredFloatParam("south", r, w)
-  if err != nil {
-    return -200, -200, -200, -200, err
-  }
-  east, err := requiredFloatParam("east", r, w)
-  if err != nil {
-    return -200, -200, -200, -200, err
-  }
-  north, err := requiredFloatParam("north", r, w)
-  if err != nil {
-    return -200, -200, -200, -200, err
-  }
+	west, err := requiredFloatParam("west", r, w)
+	if err != nil {
+		return -200, -200, -200, -200, err
+	}
+	south, err := requiredFloatParam("south", r, w)
+	if err != nil {
+		return -200, -200, -200, -200, err
+	}
+	east, err := requiredFloatParam("east", r, w)
+	if err != nil {
+		return -200, -200, -200, -200, err
+	}
+	north, err := requiredFloatParam("north", r, w)
+	if err != nil {
+		return -200, -200, -200, -200, err
+	}
 
-  if west >= east {
-    err = errors.New(fmt.Sprintf("west %v > east %v", west, east))
-    return -200, -200, -200, -200, err
-  }
-  if south >= north {
-    err = errors.New(fmt.Sprintf("south %v > north %v", south, north))
-    return -200, -200, -200, -200, err
-  }
-  return west, south, east, north, nil
+	if west >= east {
+		err = errors.New(fmt.Sprintf("west %v > east %v", west, east))
+		return -200, -200, -200, -200, err
+	}
+	if south >= north {
+		err = errors.New(fmt.Sprintf("south %v > north %v", south, north))
+		return -200, -200, -200, -200, err
+	}
+	return west, south, east, north, nil
 }

@@ -10,8 +10,8 @@ import (
 
 var redisServer string
 var redisPassword string
-var rtreeClient rtree.Client
-var redisPool redis.Pool
+var rtreeClient *rtree.Client
+var redisPool *redis.Pool
 
 func initConfig() {
 	var rtreeAddr string
@@ -27,7 +27,7 @@ func initConfig() {
 	}
 
 	// Setup the global redisPool
-	redisPool := &redis.Pool{
+	redisPool = &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
 		Dial:        NewRedisConn,
@@ -44,7 +44,7 @@ func initConfig() {
 	}
 
 	// Setup the global rtreeClient
-	rtreeClient, err := rtree.NewClient("tcp", rtreeAddr)
+	rtreeClient, err = rtree.NewClient("tcp", rtreeAddr)
 	if err != nil {
 		panic(err)
 	}
