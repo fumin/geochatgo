@@ -89,7 +89,7 @@ func stream(w http.ResponseWriter, r *http.Request) {
 	subscriber := NewRedisSubscriber(c, username)
 
 	// Inform client what her/his username is. Throughout the entire session,
-	// we'll use this string as the identifier of that user.
+	// clients should use this string as the identifier of themselves.
 	sse := NewServerSideEventWriter(w)
 	err = sse.EventWrite("username", []byte(username))
 	if err != nil {
