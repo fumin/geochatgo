@@ -1,31 +1,31 @@
 package geochat
 
 import (
+	"github.com/dhconnelly/rtreego"
 	"github.com/fumin/rtree"
 	"github.com/garyburd/redigo/redis"
 	"os"
+	"sync"
 	"time"
 )
 
+var rTree *rtree_t
 var redisServer string
 var redisPassword string
-var rtreeClient *rtree.Client
 var redisPool *redis.Pool
 
 func initConfig() {
-	var rtreeAddr string
+	rTree = &rtree_t{t: rtree.NewTree(2)}
+
 	if os.Getenv("OPENSHIFT_APP_NAME") != "" {
 		redisServer = os.Getenv("OPENSHIFT_REDIS_HOST") +
 			":" + os.Getenv("OPENSHIFT_REDIS_PORT")
 		redisPassword = os.Getenv("REDIS_PASSWORD")
-		rtreeAddr = ":6389"
 	} else {
 		redisServer = ":6379"
 		redisPassword = ""
-		rtreeAddr = ":6389"
 	}
 
-	// Setup the global redisPool
 	redisPool = &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
@@ -38,16 +38,6 @@ func initConfig() {
 	conn := redisPool.Get()
 	defer conn.Close()
 	_, err := conn.Do("PING")
-	if err != nil {
-		panic(err)
-	}
-
-	// Setup the global rtreeClient
-	rtreeClient, err = rtree.NewClient("tcp", rtreeAddr)
-	if err != nil {
-		panic(err)
-	}
-	_, err = rtreeClient.RtreeSize(rtreekeyUser)
 	if err != nil {
 		panic(err)
 	}
@@ -92,5 +82,39 @@ func NewRedisSubscriber(c redis.Conn, channel string) chan interface{} {
 const rediskeyGeo = "geo"
 const rediskeyTileChatlog = "tile_chatlog"
 
-// Rtree keys
-const rtreekeyUser = "user"
+type rtree_t struct {
+	sync.RWMutex
+	t *rtree.Rtree
+}
+
+func (rt *rtree_t) insert(key string, point, lengths []float64) {
+	rect, err := rtreego.NewRect(point, lengths)
+	if err != nil {
+		panic(err)
+	}
+	rt.Lock()
+	defer rt.Unlock()
+	rt.t.Insert(key, rect)
+}
+
+func (rt *rtree_t) del(key string) {
+	rt.Lock()
+	defer rt.Unlock()
+	rt.t.Delete(key)
+}
+
+func (rt *rtree_t) update(key string, point, lengths []float64) {
+	rect, err := rtreego.NewRect(point, lengths)
+	if err != nil {
+		panic(err)
+	}
+	rt.Lock()
+	defer rt.Unlock()
+	rt.t.Update(key, rect)
+}
+
+func (rt *rtree_t) nearestNeighbors(k int, point []float64) []string {
+	rt.RLock()
+	defer rt.RUnlock()
+	return rt.t.NearestNeighbors(k, point)
+}

@@ -35,17 +35,10 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The presence of a user should be handled solely by
-	// the EventSource endpoint "/stream". Therefore we "update",
-	// which returns an error if the username does not exist in the Rtree yet,
+	// Users' presences should be handled solely by the endpoint "/stream".
+	// Therefore we "update", which requires that the key exist in the Rtree,
 	// instead of "insert" the bounds of the user's map here.
-	err = rtreeClient.RtreeUpdate(rtreekeyUser, username,
-		[]float64{west, south}, []float64{east, north})
-	if err != nil {
-		glog.Warningf("%v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	rTree.update(username, []float64{west, south}, []float64{east, north})
 	jsonResp(w, map[string]interface{}{"ok": true})
 }
 
@@ -62,21 +55,8 @@ func stream(w http.ResponseWriter, r *http.Request) {
 	}
 	username := string(randByteSlice())
 
-	// We create a new record in Rtree to store a user's map bounds, and
-	// delete that record when the EventSource connection is lost.
-	err = rtreeClient.RtreeInsert(rtreekeyUser, username,
-		[]float64{west, south}, []float64{east, north})
-	if err != nil {
-		glog.Warningf("%v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer func() {
-		err = rtreeClient.RtreeDelete(rtreekeyUser, username)
-		if err != nil {
-			glog.Errorf("%v", err)
-		}
-	}()
+	rTree.insert(username, []float64{west, south}, []float64{east, north})
+	defer rTree.del(username) // when the EventSource connection is lost.
 
 	// Use Redis' PubSub feature to pass messages around.
 	c, err := NewRedisConn()
@@ -140,15 +120,10 @@ func say(w http.ResponseWriter, r *http.Request) {
 		glog.Warningf("%v", err)
 	}
 
+	neighbors := rTree.nearestNeighbors(100, []float64{lat, lng})
+
 	// Broadcast message to others using the Redis pipeline feature.
 	b, _ := json.Marshal(data)
-	neighbors, err := rtreeClient.RtreeNearestNeighbors(
-		rtreekeyUser, 100, []float64{lat, lng})
-	if err != nil {
-		glog.Warningf("%v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	for _, neighbor := range neighbors {
 		if neighbor == r.FormValue("username") {
 			continue
