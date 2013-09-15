@@ -4,7 +4,7 @@ set -e
 
 # Install go
 [ -d $OPENSHIFT_DATA_DIR/go ] ||
-  curl http://go.googlecode.com/files/go.go1.linux-amd64.tar.gz |
+  curl "https://go.googlecode.com/files/go1.1.2.linux-amd64.tar.gz" |
   tar xvf - -C $OPENSHIFT_DATA_DIR
 
 export GOROOT=$OPENSHIFT_DATA_DIR/go
