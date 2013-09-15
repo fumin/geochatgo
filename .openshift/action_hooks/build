@@ -15,11 +15,12 @@ export GOROOT=$OPENSHIFT_DATA_DIR/go
 export GOPATH=$OPENSHIFT_DATA_DIR/build
 export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
-# Copy source code to $GOPATH's package folder
+# Copy source code to package folder under $GOPATH
 rm -rf $GOPATH 2>/dev/null
-mkdir -p $GOPATH/src
-cp -r $OPENSHIFT_REPO_DIR/$OPENSHIFT_APP_NAME $GOPATH/src
+SOURCE_CODE_DIR=$GOPATH/src/$OPENSHIFT_APP_NAME
+mkdir -p $SOURCE_CODE_DIR
+cp -r $OPENSHIFT_REPO_DIR/* $SOURCE_CODE_DIR
 
-# Build binary and move it to $GOPATH's package folder
+# Build binary and move it to package folder
 go install $OPENSHIFT_APP_NAME/$OPENSHIFT_APP_NAME
 mv $GOPATH/bin/$OPENSHIFT_APP_NAME $GOPATH/src/$OPENSHIFT_APP_NAME
