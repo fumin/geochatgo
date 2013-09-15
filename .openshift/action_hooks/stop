@@ -2,5 +2,4 @@
 
 set -e
 
-tail $OPENSHIFT_DIY_LOG_DIR/$OPENSHIFT_APP_NAME.log || :
 xargs -r kill < $OPENSHIFT_DATA_DIR/$OPENSHIFT_APP_NAME.pid || :
