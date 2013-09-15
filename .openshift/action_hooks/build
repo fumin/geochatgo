@@ -2,6 +2,10 @@
 
 set -e
 
+export GOROOT=$OPENSHIFT_DATA_DIR/go
+export GOPATH=$OPENSHIFT_DATA_DIR/build
+export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+
 # Install go
 # We expect the output of `go version` to be something like
 # "go version go1.1.2 darwin/amd64"
@@ -10,10 +14,6 @@ if [ "$GO_VERSION" != "go1.1.2" ]; then
   curl https://go.googlecode.com/files/go1.1.2.linux-amd64.tar.gz |
   tar zxf - -C $OPENSHIFT_DATA_DIR
 fi
-
-export GOROOT=$OPENSHIFT_DATA_DIR/go
-export GOPATH=$OPENSHIFT_DATA_DIR/build
-export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
 # Copy source code to package folder under $GOPATH
 rm -rf $GOPATH 2>/dev/null
