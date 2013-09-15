@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
 	"github.com/golang/glog"
 	"html/template"
 	"net/http"
@@ -30,7 +29,7 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	west, south, east, north, err := requiredLatLngBoundsParam(r, w)
+	south, west, north, east, err := requiredLatLngBoundsParam(r, w)
 	if err != nil {
 		return
 	}
@@ -38,7 +37,12 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 	// Users' presences should be handled solely by the endpoint "/stream".
 	// Therefore we "update", which requires that the key exist in the Rtree,
 	// instead of "insert" the bounds of the user's map here.
-	rTree.update(username, []float64{west, south}, []float64{east, north})
+	err = rTree.update(username, [2]float64{south, west}, [2]float64{north - south, east - west})
+	if err != nil {
+		glog.Warningf("%v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	jsonResp(w, map[string]interface{}{"ok": true})
 }
 
@@ -49,29 +53,18 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func stream(w http.ResponseWriter, r *http.Request) {
-	west, south, east, north, err := requiredLatLngBoundsParam(r, w)
-	if err != nil {
-		return
-	}
 	username := string(randByteSlice())
 
-	rTree.insert(username, []float64{west, south}, []float64{east, north})
+	// Insert client into Rtree with an map bounds [0, 0, 0.1, 0.1].
+	// The client will update the correct bounds after we inform her/his username.
+	msg := make(chan []byte, 32)
+	rTree.insert(username, msg, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
 	defer rTree.del(username) // when the EventSource connection is lost.
-
-	// Use Redis' PubSub feature to pass messages around.
-	c, err := NewRedisConn()
-	if err != nil {
-		glog.Warningf("%v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer c.Close()
-	subscriber := NewRedisSubscriber(c, username)
 
 	// Inform client what her/his username is. Throughout the entire session,
 	// clients should use this string as the identifier of themselves.
 	sse := NewServerSideEventWriter(w)
-	err = sse.EventWrite("username", []byte(username))
+	err := sse.EventWrite("username", []byte(username))
 	if err != nil {
 		return
 	}
@@ -79,11 +72,9 @@ func stream(w http.ResponseWriter, r *http.Request) {
 L:
 	for {
 		select {
-		case msg := <-subscriber:
-			switch v := msg.(type) {
-			case redis.Message:
-				sse.EventWrite("custom", v.Data)
-			case error:
+		case contents := <-msg:
+			err = sse.EventWrite("custom", contents)
+			if err != nil {
 				break L
 			}
 		case <-sse.ConnClosed:
@@ -97,11 +88,7 @@ func say(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	lat, err := requiredFloatParam("latitude", r, w)
-	if err != nil {
-		return
-	}
-	lng, err := requiredFloatParam("longitude", r, w)
+	lat, lng, err := requiredLatLngParams("latitude", "longitude", r, w)
 	if err != nil {
 		return
 	}
@@ -111,40 +98,25 @@ func say(w http.ResponseWriter, r *http.Request) {
 		"latitude":   lat,
 		"longitude":  lng,
 	}
-	conn := redisPool.Get()
-	defer conn.Close()
 
 	// Store the message into the chatlogs which may be retrieved later on.
+	conn := redisPool.Get()
 	err = maptileStore(rediskeyTileChatlog, data, conn)
+	conn.Close()
 	if err != nil {
 		glog.Warningf("%v", err)
 	}
 
-	neighbors := rTree.nearestNeighbors(100, []float64{lat, lng})
-
 	// Broadcast message to others using the Redis pipeline feature.
+	neighbors := rTree.nearestNeighbors(100, [2]float64{lat, lng})
 	b, _ := json.Marshal(data)
 	for _, neighbor := range neighbors {
-		if neighbor == r.FormValue("username") {
+		if neighbor.key == r.FormValue("username") {
 			continue
 		}
-		err = conn.Send("PUBLISH", neighbor, b)
-		if err != nil {
-			glog.Warningf("%v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	conn.Flush()
-	for _, neighbor := range neighbors {
-		if neighbor == r.FormValue("username") {
-			continue
-		}
-		_, err := conn.Receive()
-		if err != nil {
-			glog.Warningf("%v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		select {
+		case neighbor.channel <- b:
+		default:
 		}
 	}
 
@@ -184,30 +156,46 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func requiredLatLngBoundsParam(r *http.Request, w http.ResponseWriter) (float64, float64, float64, float64, error) {
-	west, err := requiredFloatParam("west", r, w)
+	south, west, err := requiredLatLngParams("south", "west", r, w)
 	if err != nil {
 		return -200, -200, -200, -200, err
 	}
-	south, err := requiredFloatParam("south", r, w)
-	if err != nil {
-		return -200, -200, -200, -200, err
-	}
-	east, err := requiredFloatParam("east", r, w)
-	if err != nil {
-		return -200, -200, -200, -200, err
-	}
-	north, err := requiredFloatParam("north", r, w)
+	north, east, err := requiredLatLngParams("north", "east", r, w)
 	if err != nil {
 		return -200, -200, -200, -200, err
 	}
 
 	if west >= east {
-		err = errors.New(fmt.Sprintf("west %v > east %v", west, east))
+		errMsg := fmt.Sprintf("west %v >= east %v", west, east)
+		err = errors.New(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
 		return -200, -200, -200, -200, err
 	}
 	if south >= north {
-		err = errors.New(fmt.Sprintf("south %v > north %v", south, north))
+		errMsg := fmt.Sprintf("south %v >= north %v", south, north)
+		err = errors.New(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
 		return -200, -200, -200, -200, err
 	}
-	return west, south, east, north, nil
+	return south, west, north, east, nil
+}
+
+func requiredLatLngParams(latKey, lngKey string, r *http.Request, w http.ResponseWriter) (float64, float64, error) {
+	lat, err := requiredFloatParam(latKey, r, w)
+	if err != nil {
+		return -200, -200, err
+	}
+	if lat < -90 || lat > 90 {
+		http.Error(w, fmt.Sprint("Wrong latitude: %v", lat), http.StatusBadRequest)
+		return -200, -200, err
+	}
+	lng, err := requiredFloatParam(lngKey, r, w)
+	if err != nil {
+		return -200, -200, err
+	}
+	if lng < -180 || lng > 180 {
+		http.Error(w, fmt.Sprint("Wrong longitude: %v", lng), http.StatusBadRequest)
+		return -200, -200, err
+	}
+	return lat, lng, nil
 }

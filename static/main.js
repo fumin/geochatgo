@@ -1,3 +1,11 @@
+function updateMapbounds(username, mapBounds) {
+  jQuery.post("update_mapbounds",
+              { username: username,
+                west: mapBounds.getWest(), south: mapBounds.getSouth(),
+                east: mapBounds.getEast(), north: mapBounds.getNorth(), },
+              function(data){ console.log("update_mapbounds: " + data); });
+}
+
 $(document).ready(function() {
 
 g_map = L.map("map");
@@ -106,14 +114,11 @@ navigator.geolocation.watchPosition(function(position){
     //});
 
     // Create streaming event source
-    mapBounds = g_map.getBounds(); // in latitude and longitude
-    var path = "stream?west=" + mapBounds.getWest() +
-                 "&south=" + mapBounds.getSouth() +
-                 "&east="  + mapBounds.getEast() +
-                 "&north=" + mapBounds.getNorth();
-    g_source = new EventSource(path);
+    g_source = new EventSource("/stream");
     g_source.addEventListener("username", function(e){
       g_username = e.data;
+      mapBounds = g_map.getBounds(); // in latitude and longitude
+      updateMapbounds(g_username, mapBounds);
     }, false);
     g_source.addEventListener("custom", function(e){
       var data = JSON.parse(e.data);
@@ -130,11 +135,7 @@ navigator.geolocation.watchPosition(function(position){
 g_map.on('moveend', debounce(function(e) {
   if (typeof g_username == "undefined") { return; }
   mapBounds = g_map.getBounds(); // in latitude and longitude
-  jQuery.post("update_mapbounds",
-              { username: g_username,
-                west: mapBounds.getWest(), south: mapBounds.getSouth(),
-                east: mapBounds.getEast(), north: mapBounds.getNorth(), },
-              function(data){ console.log("update_mapbounds: " + data); });
+  updateMapbounds(g_username, mapBounds);
 }, 5000));
 
 }); // $(document).ready

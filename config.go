@@ -1,11 +1,8 @@
 package geochat
 
 import (
-	"github.com/dhconnelly/rtreego"
-	"github.com/fumin/rtree"
 	"github.com/garyburd/redigo/redis"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -15,7 +12,7 @@ var redisPassword string
 var redisPool *redis.Pool
 
 func initConfig() {
-	rTree = &rtree_t{t: rtree.NewTree(2)}
+	rTree = NewRtree()
 
 	if os.Getenv("OPENSHIFT_APP_NAME") != "" {
 		redisServer = os.Getenv("OPENSHIFT_REDIS_HOST") +
@@ -81,40 +78,3 @@ func NewRedisSubscriber(c redis.Conn, channel string) chan interface{} {
 // Redis keys/prefixes
 const rediskeyGeo = "geo"
 const rediskeyTileChatlog = "tile_chatlog"
-
-type rtree_t struct {
-	sync.RWMutex
-	t *rtree.Rtree
-}
-
-func (rt *rtree_t) insert(key string, point, lengths []float64) {
-	rect, err := rtreego.NewRect(point, lengths)
-	if err != nil {
-		panic(err)
-	}
-	rt.Lock()
-	defer rt.Unlock()
-	rt.t.Insert(key, rect)
-}
-
-func (rt *rtree_t) del(key string) {
-	rt.Lock()
-	defer rt.Unlock()
-	rt.t.Delete(key)
-}
-
-func (rt *rtree_t) update(key string, point, lengths []float64) {
-	rect, err := rtreego.NewRect(point, lengths)
-	if err != nil {
-		panic(err)
-	}
-	rt.Lock()
-	defer rt.Unlock()
-	rt.t.Update(key, rect)
-}
-
-func (rt *rtree_t) nearestNeighbors(k int, point []float64) []string {
-	rt.RLock()
-	defer rt.RUnlock()
-	return rt.t.NearestNeighbors(k, point)
-}
