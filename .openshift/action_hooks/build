@@ -2,6 +2,7 @@
 
 set -e
 
+# Install go
 [ -d $OPENSHIFT_DATA_DIR/go ] ||
   curl http://go.googlecode.com/files/go.go1.linux-amd64.tar.gz |
   tar xvf - -C $OPENSHIFT_DATA_DIR
@@ -10,7 +11,11 @@ export GOROOT=$OPENSHIFT_DATA_DIR/go
 export GOPATH=$OPENSHIFT_DATA_DIR/build
 export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
+# Copy source code to $GOPATH's package folder
 rm -rf $GOPATH 2>/dev/null
 mkdir -p $GOPATH/src
-cp -r $OPENSHIFT_REPO_DIR/ $GOPATH/src
-go get $OPENSHIFT_APP_NAME/...
+cp -r $OPENSHIFT_REPO_DIR/$OPENSHIFT_APP_NAME $GOPATH/src
+
+# Build binary and move it to $GOPATH's package folder
+go install $OPENSHIFT_APP_NAME/$OPENSHIFT_APP_NAME
+mv $GOPATH/bin/$OPENSHIFT_APP_NAME $GOPATH/src/$OPENSHIFT_APP_NAME
