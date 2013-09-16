@@ -14,9 +14,6 @@ L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/
   attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
 }).addTo(g_map);
 L.control.scale().addTo(g_map);
-// Initialize the broadcast circle with an arbitrary position.
-// We'll update it later when we have location information.
-var broadcastCircle = L.circle([45, 45], 0).addTo(g_map);
 
 var markers = new L.MarkerClusterGroup({
   zoomToBoundsOnClick: false,
@@ -85,35 +82,13 @@ g_map.on('viewreset', function(e) { // called upon zoom level change
   }
 });
 
-// slider results circle here
-// var slider = $('#slider').slider({
-//               step: 0.1, tooltip: "hide", value: 0 }).data("slider");
-// Utility method that gives the value in meters assuming the full stretch
-// of the slider equals half the bounds of the map.
-//slider["getValueInMeters"] = function() {
-//  var bounds = map.getBounds(),
-//      centerLat = bounds.getCenter().lat,
-//      halfWorldMeters = 6378137 * Math.PI * Math.cos(centerLat * Math.PI / 180),
-//      dist = halfWorldMeters * (bounds.getNorthEast().lng - bounds.getSouthWest().lng) / 180 / 2;
-//  return dist / slider.max * slider.getValue();
-//};
-
 navigator.geolocation.watchPosition(function(position){
   g_latitude = position.coords.latitude;
   g_longitude = position.coords.longitude;
 
   if (typeof g_source == "undefined") {
-    // Initialize map
-    g_map.setView([g_latitude, g_longitude], 13);
+    g_map.setView([g_latitude, g_longitude], 13); // Initialize map
 
-    // Prepare broadcast radius slider
-    broadcastCircle.setLatLng(new L.LatLng(g_latitude, g_longitude));
-    //broadcastCircle.setRadius(slider.getValueInMeters());
-    //$("#slider").slider().on("slide", function(ev){
-    //  broadcastCircle.setRadius(slider.getValueInMeters());
-    //});
-
-    // Create streaming event source
     g_source = new EventSource("/stream");
     g_source.addEventListener("username", function(e){
       g_username = e.data;
@@ -126,11 +101,7 @@ navigator.geolocation.watchPosition(function(position){
       markers.addChat(data);
     }, false);
   }
-
-  // Routine work on every location change: update circle and report location
-  broadcastCircle.setLatLng(new L.LatLng(g_latitude, g_longitude));
-  
-}); // navigator.geolocation.watchPosition
+});
 
 g_map.on('moveend', debounce(function(e) {
   if (typeof g_username == "undefined") { return; }

@@ -14,7 +14,6 @@ $("#say_form").submit(function(){
       (typeof g_longitude == "undefined")) { return false; }
   // We allow users to continuously send message for now.
   // if ($("#say-btn").prop("disabled")) { return false; }
-  //console.log(slider.getValue());
   var precision = 5;
   var msg = $("#msg").val();
   if ($("#screen_name").val()) {
