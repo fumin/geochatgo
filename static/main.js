@@ -15,6 +15,9 @@ L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/
 }).addTo(g_map);
 L.control.scale().addTo(g_map);
 
+// markers is the layer that displays the chatlogs on the map.
+// To avoid cluttering the map with too many chats, we display only the latest
+// five chats in each cluster.
 var markers = new L.MarkerClusterGroup({
   zoomToBoundsOnClick: false,
   spiderfyOnMaxZoom:   false,
@@ -27,28 +30,25 @@ var markers = new L.MarkerClusterGroup({
         return 1;
       } else { return -1; }
     }).slice(0, 5);
-    var content = "";
+
+    var box = document.createElement("div");
     for (var i = 0; i != ms.length; ++i) {
-      // if markerId exists, it's a dummy chatlog created by our javascript
-      // as a means to facilitate animation
-      var htmlContent = "&nbsp;";
+      var chat = document.createElement("div");
+      chat.classList.add("msg-history");
+
+      if (i == 0) { chat.classList.add("newchat"); }
+
       if (ms[i].chatData.markerId) {
-        content += ("<div id=" + ms[i].chatData.markerId + " class='msg-history ");
+        chat.id = ms[i].chatData.markerId;
+        chat.innerHTML = "&nbsp;";
       } else {
-        htmlContent = linkify(ms[i].chatData.msg);
-        content += "<div class='msg-history ";
+        chat.innerHTML = linkify(ms[i].chatData.msg);
       }
-
-      if (i == 0) {
-        content += "newchat"
-      }
-      content += "'>"
-
-      content += (htmlContent + "</div>");
+      box.appendChild(chat)
     }
     return new L.DivIcon({
       className: "",
-      html: (new L.Icon.Default()).createIcon().outerHTML + content
+      html: (new L.Icon.Default()).createIcon().outerHTML + box.outerHTML
     })
   },
 });
@@ -63,7 +63,12 @@ markers["addChat"] = function(datum) {
   return marker;
 };
 
-// Create chatlogs layer
+markers.on("clusterclick", function(a){
+  console.log(a);
+});
+
+// chatlogLayer isn't for display but for retrieving historical chatlogs for
+// each tile from the server by reusing code from Leaflet's TileLayer.
 var chatlogLayer = L.ajaxTileLayer("/chatlogs/{z}/{x}/{y}.json", {
   maxZoom: 15,
   success: function(data_unparsed) {
