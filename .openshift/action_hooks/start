@@ -1,9 +1,8 @@
 #!/bin/bash
 
 set -e
-# export GOROOT=$OPENSHIFT_DATA_DIR/go
+
 export GOPATH=$OPENSHIFT_DATA_DIR/build
-# export PATH=$GOPATH/src/$OPENSHIFT_APP_NAME:$GOROOT/bin:$PATH
 
 # Change directory to package, otherwise Go's template library will not find
 # the html templates we put under /tmpl
