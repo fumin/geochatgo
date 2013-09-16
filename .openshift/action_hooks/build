@@ -21,6 +21,5 @@ SOURCE_CODE_DIR=$GOPATH/src/$OPENSHIFT_APP_NAME
 mkdir -p $SOURCE_CODE_DIR
 cp -r $OPENSHIFT_REPO_DIR/* $SOURCE_CODE_DIR
 
-# Build binary and move it to package folder
+# Build binary
 go get $OPENSHIFT_APP_NAME/...
-# mv $GOPATH/bin/main $GOPATH/src/$OPENSHIFT_APP_NAME/$OPENSHIFT_APP_NAME
