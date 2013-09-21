@@ -88,19 +88,31 @@ func (t *rtree_t) del(key string) {
 func (t *rtree_t) nearestNeighbors(k int, point [2]float64) []*receiver_t {
 	t.RLock()
 	defer t.RUnlock()
-	neighbors := t.rt.NearestNeighbors(k, point[:])
+	spacials := t.rt.NearestNeighbors(k, point[:])
+	return removeNilsAndCastToReceivers(spacials)
+}
 
-	// Drop nil elements and cast rtreego.Spatial to *receiver_t
-	receivers := make([]*receiver_t, len(neighbors))
+const margin = 0.000001
+
+func (t *rtree_t) searchContaining(k int, point [2]float64) []*receiver_t {
+	rect, _ := rtreego.NewRect(point[:], []float64{point[0] + margin, point[1] + margin})
+	t.RLock()
+	defer t.RUnlock()
+	spacials := t.rt.SearchIntersect(rect)
+	return removeNilsAndCastToReceivers(spacials)
+}
+
+func removeNilsAndCastToReceivers(spacials []rtreego.Spatial) []*receiver_t {
+	receivers := make([]*receiver_t, len(spacials))
 	i := 0
-	for ; i != len(neighbors); i++ {
-		neighbor := neighbors[i]
-		if neighbor == nil {
+	for ; i != len(spacials); i++ {
+		spacial := spacials[i]
+		if spacial == nil {
 			break
 		}
-		receiver, ok := neighbor.(*receiver_t)
+		receiver, ok := spacial.(*receiver_t)
 		if !ok {
-			panic(fmt.Sprint("Non *receiver_t object %v stored in Rtree", neighbor))
+			panic(fmt.Sprint("Non *receiver_t object %v stored in Rtree", spacial))
 		}
 		receivers[i] = receiver
 	}

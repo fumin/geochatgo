@@ -37,7 +37,8 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 	// Users' presences should be handled solely by the endpoint "/stream".
 	// Therefore we "update", which requires that the key exist in the Rtree,
 	// instead of "insert" the bounds of the user's map here.
-	err = rTree.update(username, [2]float64{south, west}, [2]float64{north - south, east - west})
+	rtree := detectRtreeType(r)
+	err = rtree.update(username, [2]float64{south, west}, [2]float64{north - south, east - west})
 	if err != nil {
 		glog.Warningf("%v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -58,8 +59,9 @@ func stream(w http.ResponseWriter, r *http.Request) {
 	// Insert client into Rtree with an map bounds [0, 0, 0.1, 0.1].
 	// The client will update the correct bounds after we inform her/his username.
 	msg := make(chan []byte, 32)
-	rTree.insert(username, msg, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
-	defer rTree.del(username) // when the EventSource connection is lost.
+	rtree := detectRtreeType(r)
+	rtree.insert(username, msg, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+	defer rtree.del(username) // when the EventSource connection is lost.
 
 	// Inform client what her/his username is. Throughout the entire session,
 	// clients should use this string as the identifier of themselves.
@@ -107,8 +109,8 @@ func say(w http.ResponseWriter, r *http.Request) {
 		glog.Warningf("%v", err)
 	}
 
-	// Broadcast message to others using the Redis pipeline feature.
-	neighbors := rTree.nearestNeighbors(100, [2]float64{lat, lng})
+	// Broadcast message to others.
+	neighbors := nnRtree.nearestNeighbors(100, [2]float64{lat, lng})
 	b, _ := json.Marshal(data)
 	for _, neighbor := range neighbors {
 		if neighbor.key == r.FormValue("username") {
@@ -116,6 +118,13 @@ func say(w http.ResponseWriter, r *http.Request) {
 		}
 		select {
 		case neighbor.channel <- b:
+		default:
+		}
+	}
+	fans := intersectRtree.searchContaining(100, [2]float64{lat, lng})
+	for _, fan := range fans {
+		select {
+		case fan.channel <- b:
 		default:
 		}
 	}
@@ -155,6 +164,14 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	bw.Write([]byte{'['})
 	bw.Write([]byte(strings.Join(v, ",")))
 	bw.Write([]byte{']'})
+}
+
+func detectRtreeType(r *http.Request) *rtree_t {
+	rtree := nnRtree
+	if r.FormValue("rtreeType") == "intersectRTree" {
+		rtree = intersectRtree
+	}
+	return rtree
 }
 
 func requiredLatLngBoundsParam(r *http.Request, w http.ResponseWriter) (float64, float64, float64, float64, error) {

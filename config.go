@@ -6,13 +6,14 @@ import (
 	"time"
 )
 
-var rTree *rtree_t
+var nnRtree, intersectRtree *rtree_t
 var redisServer string
 var redisPassword string
 var redisPool *redis.Pool
 
 func initConfig() {
-	rTree = NewRtree()
+	nnRtree = NewRtree()
+	intersectRtree = NewRtree()
 
 	if os.Getenv("OPENSHIFT_APP_NAME") != "" {
 		redisServer = os.Getenv("OPENSHIFT_REDIS_HOST") +

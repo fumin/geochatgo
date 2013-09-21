@@ -1,8 +1,10 @@
-function updateMapbounds(username, mapBounds) {
+function updateMapbounds(username, mapBounds, rtreeType) {
+  rtreeType = rtreeType || "nnRtree";
   jQuery.post("update_mapbounds",
               { username: username,
                 west: mapBounds.getWest(), south: mapBounds.getSouth(),
-                east: mapBounds.getEast(), north: mapBounds.getNorth(), },
+                east: mapBounds.getEast(), north: mapBounds.getNorth(),
+                rtreeType: rtreeType, },
               function(data){ console.log("update_mapbounds: " + data); });
 }
 

@@ -39,7 +39,7 @@ function getChatlogs(latLng, box) {
   var selector = ".chat-history > .content > .list-container"
   var listContainer = box.querySelector(selector);
 
-  var zoom = g_map.getZoom();
+  var zoom = g_map.getZoom() + 1; // +1 to increase the granularity of popups.
   var tilePoint = latLngToTileNumber(latLng, zoom);
   var req = new XMLHttpRequest();
   req.onreadystatechange = function() {
@@ -57,10 +57,10 @@ function getChatlogs(latLng, box) {
   req.send();
 
   var tileLatLngBounds = tilePointToLatLng(tilePoint, zoom);
-  var source = new EventSource("/stream");
+  var source = new EventSource("/stream?rtreeType=intersectRTree");
   source.addEventListener("username", function(e){
     var username = e.data;
-    updateMapbounds(username, tileLatLngBounds);
+    updateMapbounds(username, tileLatLngBounds, "intersectRTree");
   }, false);
   source.addEventListener("custom", function(e){
     var data = JSON.parse(e.data);
