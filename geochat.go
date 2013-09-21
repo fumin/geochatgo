@@ -126,13 +126,23 @@ func say(w http.ResponseWriter, r *http.Request) {
 func chatlogs(w http.ResponseWriter, r *http.Request) {
 	re := regexp.MustCompile(`/(\d+)/(\d+)/(\d+)`)
 	matches := re.FindStringSubmatch(r.URL.Path)
+	if len(matches) != 4 {
+		errMsg := fmt.Sprintf("Wrong path format: %v", r.URL.Path)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return
+	}
 	z, _ := strconv.Atoi(matches[1])
 	x, _ := strconv.Atoi(matches[2])
 	y, _ := strconv.Atoi(matches[3])
+
+	limit, err := optionalIntParam("limit", 16, r, w)
+	if err != nil {
+		return
+	}
+
 	conn := redisPool.Get()
 	defer conn.Close()
-
-	v, err := maptileRead(rediskeyTileChatlog, z, x, y, 0, 16, conn)
+	v, err := maptileRead(rediskeyTileChatlog, z, x, y, 0, limit, conn)
 	if err != nil {
 		glog.Warningf("%v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -141,18 +151,10 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 
 	// Concatenate json strings by ourselves, should be fast than json.Marshall?
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write([]byte{'['})
-	if err != nil {
-		return
-	}
-	w.Write([]byte(strings.Join(v, ",")))
-	if err != nil {
-		return
-	}
-	w.Write([]byte{']'})
-	if err != nil {
-		return
-	}
+	bw := &byteWriter{respWriter: w}
+	bw.Write([]byte{'['})
+	bw.Write([]byte(strings.Join(v, ",")))
+	bw.Write([]byte{']'})
 }
 
 func requiredLatLngBoundsParam(r *http.Request, w http.ResponseWriter) (float64, float64, float64, float64, error) {

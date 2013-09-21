@@ -17,13 +17,6 @@
   width: 100%;
 }
 
-
-/* set broadcast radius slider invisible; should be no use for users. */
-.slider {
-  display: none;
-  margin: 0 auto;
-}
-
 /* Position for message container */
 .messagebox{
   padding: 0% 20%;
@@ -65,4 +58,37 @@
   width: 120px;
   text-align: center;
   margin-left: -60px;
+}
+
+/* chat history boxes */
+#historical-arena {
+  position: absolute;
+  top: 0%;
+}
+
+.chat-history {
+  resize: both;
+}
+
+.chat-history > .content {
+  background: red;
+}
+
+.chat-history > .content > .list-container {
+  height: 200px;
+  overflow: scroll;
+}
+
+.chat-history > .handler {
+  height: 40px;
+  background: blue;
+}
+
+.chat-history > .handler > .close {
+  float: right;
+  font-size: 30px;
+}
+.chat-history > .handler > .close:hover {
+  cursor: move;
+  background: #0AF;
 }

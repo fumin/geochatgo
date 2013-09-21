@@ -44,12 +44,12 @@ var markers = new L.MarkerClusterGroup({
       } else {
         chat.innerHTML = linkify(ms[i].chatData.msg);
       }
-      box.appendChild(chat)
+      box.appendChild(chat);
     }
     return new L.DivIcon({
       className: "",
       html: (new L.Icon.Default()).createIcon().outerHTML + box.outerHTML
-    })
+    });
   },
 });
 g_map.addLayer(markers);
@@ -62,10 +62,6 @@ markers["addChat"] = function(datum) {
   markers.addLayer(marker);
   return marker;
 };
-
-markers.on("clusterclick", function(a){
-  console.log(a);
-});
 
 // chatlogLayer isn't for display but for retrieving historical chatlogs for
 // each tile from the server by reusing code from Leaflet's TileLayer.

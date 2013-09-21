@@ -25,6 +25,20 @@ func requiredIntParam(key string, r *http.Request, w http.ResponseWriter) (int, 
 	return i, nil
 }
 
+func optionalIntParam(key string, defaultVal int, r *http.Request, w http.ResponseWriter) (int, error) {
+	v := r.FormValue(key)
+	if v == "" {
+		return defaultVal, nil
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		errMsg := fmt.Sprintf("Wrong integer format: %v", v)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return 0, errors.New(errMsg)
+	}
+	return i, nil
+}
+
 func requiredFloatParam(key string, r *http.Request, w http.ResponseWriter) (float64, error) {
 	v := r.FormValue(key)
 	if v == "" {
@@ -61,6 +75,18 @@ func jsonResp(w http.ResponseWriter, o map[string]interface{}) {
 	w.Write(b)
 }
 
+type byteWriter struct {
+	respWriter http.ResponseWriter
+	err        error
+}
+
+func (w *byteWriter) Write(b []byte) {
+	if w.err != nil {
+		return
+	}
+	_, w.err = w.respWriter.Write(b)
+}
+
 const SSEHeatbeat = "heartbeat"
 
 type Sse struct {
@@ -89,33 +115,26 @@ func NewServerSideEventWriter(w http.ResponseWriter) Sse {
 }
 
 func (sse Sse) Write(b []byte) error {
-	_, err := sse.w.Write([]byte("data: "))
-	if err != nil {
-		return err
+	bw := &byteWriter{respWriter: sse.w}
+	bw.Write([]byte("data: "))
+	bw.Write(b)
+	bw.Write([]byte("\n\n"))
+	if bw.err != nil {
+		return bw.err
 	}
-	_, err = sse.w.Write(b)
-	if err != nil {
-		return err
-	}
-	_, err = sse.w.Write([]byte("\n\n"))
 	if f, ok := sse.w.(http.Flusher); ok {
 		f.Flush()
 	}
-	return err
+	return nil
 }
 
 func (sse Sse) EventWrite(event string, b []byte) error {
-	_, err := sse.w.Write([]byte("event: "))
-	if err != nil {
-		return err
-	}
-	_, err = sse.w.Write([]byte(event))
-	if err != nil {
-		return err
-	}
-	_, err = sse.w.Write([]byte("\n"))
-	if err != nil {
-		return err
+	bw := &byteWriter{respWriter: sse.w}
+	bw.Write([]byte("event: "))
+	bw.Write([]byte(event))
+	bw.Write([]byte("\n"))
+	if bw.err != nil {
+		return bw.err
 	}
 	return sse.Write(b)
 }
