@@ -130,7 +130,8 @@ func NewServerSideEventWriter(w http.ResponseWriter) Sse {
 	headers.Set("Cache-Control", "no-cache")
 	headers.Set("Connection", "keep-alive")
 
-	sse := Sse{w, time.NewTicker(60 * time.Second), make(chan bool, 1)}
+	// Openshift proxy's keep-alive has a timeout of 15, we need to be shorter.
+	sse := Sse{w, time.NewTicker(10 * time.Second), make(chan bool, 1)}
 	go func() {
 		for _ = range sse.ticker.C {
 			err := sse.EventWrite(SSEHeatbeat, make([]byte, 0))
