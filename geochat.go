@@ -27,12 +27,10 @@ func init() {
 }
 
 func openPopup(w http.ResponseWriter, r *http.Request) {
-	username, err := requiredStringParam("username", r, w)
-	if err != nil {
-		return
-	}
-	south, west, north, east, err := requiredLatLngBoundsParam(r, w)
-	if err != nil {
+	parser := paramParser{R: r, W: w}
+	username := parser.RequiredStringParam("username")
+	south, west, north, east := parser.requiredLatLngBoundsParam()
+	if parser.Err != nil {
 		return
 	}
 
@@ -49,12 +47,10 @@ func openPopup(w http.ResponseWriter, r *http.Request) {
 }
 
 func closePopup(w http.ResponseWriter, r *http.Request) {
-	username, err := requiredStringParam("username", r, w)
-	if err != nil {
-		return
-	}
-	popupId, err := requiredStringParam("popupId", r, w)
-	if err != nil {
+	parser := paramParser{R: r, W: w}
+	username := parser.RequiredStringParam("username")
+	popupId := parser.RequiredStringParam("popupId")
+	if parser.Err != nil {
 		return
 	}
 
@@ -63,12 +59,10 @@ func closePopup(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateMapbounds(w http.ResponseWriter, r *http.Request) {
-	username, err := requiredStringParam("username", r, w)
-	if err != nil {
-		return
-	}
-	south, west, north, east, err := requiredLatLngBoundsParam(r, w)
-	if err != nil {
+	parser := paramParser{R: r, W: w}
+	username := parser.RequiredStringParam("username")
+	south, west, north, east := parser.requiredLatLngBoundsParam()
+	if parser.Err != nil {
 		return
 	}
 
@@ -76,7 +70,7 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 	// Therefore we "update", which requires that the key exist in the Rtree,
 	// instead of "insert" the bounds of the user's map here.
 	lengths := [2]float64{north - south, east - west}
-	err = rTree.update(username, [2]float64{south, west}, lengths)
+	err := rTree.update(username, [2]float64{south, west}, lengths)
 	if err != nil {
 		glog.Warningf("%v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -123,12 +117,10 @@ L:
 }
 
 func say(w http.ResponseWriter, r *http.Request) {
-	msg, err := requiredStringParam("msg", r, w)
-	if err != nil {
-		return
-	}
-	lat, lng, err := requiredLatLngParams("latitude", "longitude", r, w)
-	if err != nil {
+	parser := paramParser{R: r, W: w}
+	msg := parser.RequiredStringParam("msg")
+	lat, lng := parser.requiredLatLngParams("latitude", "longitude")
+	if parser.Err != nil {
 		return
 	}
 	data := map[string]interface{}{
@@ -140,7 +132,7 @@ func say(w http.ResponseWriter, r *http.Request) {
 
 	// Store the message into the chatlogs which may be retrieved later on.
 	conn := redisPool.Get()
-	err = maptileStore(rediskeyTileChatlog, data, conn)
+	err := maptileStore(rediskeyTileChatlog, data, conn)
 	conn.Close()
 	if err != nil {
 		glog.Warningf("%v", err)
@@ -181,8 +173,9 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	x, _ := strconv.Atoi(matches[2])
 	y, _ := strconv.Atoi(matches[3])
 
-	limit, err := optionalIntParam("limit", 16, r, w)
-	if err != nil {
+	parser := paramParser{R: r, W: w}
+	limit := parser.OptionalIntParam("limit", 16)
+	if parser.Err != nil {
 		return
 	}
 
@@ -203,47 +196,45 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	bw.Write([]byte{']'})
 }
 
-func requiredLatLngBoundsParam(r *http.Request, w http.ResponseWriter) (float64, float64, float64, float64, error) {
-	south, west, err := requiredLatLngParams("south", "west", r, w)
-	if err != nil {
-		return -200, -200, -200, -200, err
-	}
-	north, east, err := requiredLatLngParams("north", "east", r, w)
-	if err != nil {
-		return -200, -200, -200, -200, err
+func (parser *paramParser) requiredLatLngBoundsParam() (float64, float64, float64, float64) {
+	south, west := parser.requiredLatLngParams("south", "west")
+	north, east := parser.requiredLatLngParams("north", "east")
+	if parser.Err != nil {
+		return -200, -200, -200, -200
 	}
 
 	if west >= east {
 		errMsg := fmt.Sprintf("west %v >= east %v", west, east)
-		err = errors.New(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return -200, -200, -200, -200, err
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return -200, -200, -200, -200
 	}
 	if south >= north {
 		errMsg := fmt.Sprintf("south %v >= north %v", south, north)
-		err = errors.New(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return -200, -200, -200, -200, err
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return -200, -200, -200, -200
 	}
-	return south, west, north, east, nil
+	return south, west, north, east
 }
 
-func requiredLatLngParams(latKey, lngKey string, r *http.Request, w http.ResponseWriter) (float64, float64, error) {
-	lat, err := requiredFloatParam(latKey, r, w)
-	if err != nil {
-		return -200, -200, err
+func (parser *paramParser) requiredLatLngParams(latKey, lngKey string) (float64, float64) {
+	lat := parser.RequiredFloatParam(latKey)
+	lng := parser.RequiredFloatParam(lngKey)
+	if parser.Err != nil {
+		return -200, -200
 	}
 	if lat < -90 || lat > 90 {
-		http.Error(w, fmt.Sprint("Wrong latitude: %v", lat), http.StatusBadRequest)
-		return -200, -200, err
-	}
-	lng, err := requiredFloatParam(lngKey, r, w)
-	if err != nil {
-		return -200, -200, err
+		errMsg := fmt.Sprint("Wrong latitude: %v", lat)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return -200, -200
 	}
 	if lng < -180 || lng > 180 {
-		http.Error(w, fmt.Sprint("Wrong longitude: %v", lng), http.StatusBadRequest)
-		return -200, -200, err
+		errMsg := fmt.Sprint("Wrong longitude: %v", lng)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return -200, -200
 	}
-	return lat, lng, nil
+	return lat, lng
 }

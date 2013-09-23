@@ -4,65 +4,94 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func requiredIntParam(key string, r *http.Request, w http.ResponseWriter) (int, error) {
-	v := r.FormValue(key)
+type paramParser struct {
+	R   *http.Request
+	W   http.ResponseWriter
+	Err error
+}
+
+const errInt int = math.MinInt32
+
+func (parser *paramParser) RequiredIntParam(key string) int {
+	if parser.Err != nil {
+		return errInt
+	}
+	v := parser.R.FormValue(key)
 	if v == "" {
 		errMsg := fmt.Sprintf("missing param: %v", key)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return 0, errors.New(errMsg)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return errInt
 	}
 	i, err := strconv.Atoi(v)
 	if err != nil {
 		errMsg := fmt.Sprintf("Wrong integer format: %v", v)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return 0, errors.New(errMsg)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return errInt
 	}
-	return i, nil
+	return i
 }
 
-func optionalIntParam(key string, defaultVal int, r *http.Request, w http.ResponseWriter) (int, error) {
-	v := r.FormValue(key)
+func (parser *paramParser) OptionalIntParam(key string, defaultVal int) int {
+	if parser.Err != nil {
+		return errInt
+	}
+	v := parser.R.FormValue(key)
 	if v == "" {
-		return defaultVal, nil
+		return defaultVal
 	}
 	i, err := strconv.Atoi(v)
 	if err != nil {
 		errMsg := fmt.Sprintf("Wrong integer format: %v", v)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return 0, errors.New(errMsg)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return errInt
 	}
-	return i, nil
+	return i
 }
 
-func requiredFloatParam(key string, r *http.Request, w http.ResponseWriter) (float64, error) {
-	v := r.FormValue(key)
+const errFloat float64 = math.SmallestNonzeroFloat64
+
+func (parser *paramParser) RequiredFloatParam(key string) float64 {
+	if parser.Err != nil {
+		return errFloat
+	}
+	v := parser.R.FormValue(key)
 	if v == "" {
 		errMsg := fmt.Sprintf("missing param: %v", key)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return 0, errors.New(errMsg)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return errFloat
 	}
 	f, err := strconv.ParseFloat(v, 32)
 	if err != nil {
 		errMsg := fmt.Sprintf("Wrong integer format: %v", v)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return 0, errors.New(errMsg)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return errFloat
 	}
-	return f, nil
+	return f
 }
 
-func requiredStringParam(key string, r *http.Request, w http.ResponseWriter) (string, error) {
-	v := r.FormValue(key)
+func (parser *paramParser) RequiredStringParam(key string) string {
+	if parser.Err != nil {
+		return ""
+	}
+	v := parser.R.FormValue(key)
 	if v == "" {
 		errMsg := fmt.Sprintf("missing param: %v", key)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return "", errors.New(errMsg)
+		http.Error(parser.W, errMsg, http.StatusBadRequest)
+		parser.Err = errors.New(errMsg)
+		return ""
 	}
-	return v, nil
+	return v
 }
 
 func jsonResp(w http.ResponseWriter, o map[string]interface{}) {
