@@ -196,7 +196,7 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	//
 	// Openshift's cache is a bastard, it accepts only UTC time,
 	// when we explicitly stated that the local machine time is in EDT.
-	w.Header().Set("Last-Modified", time.Now().UTC().Format(time.RFC1123))
+	// w.Header().Set("Last-Modified", time.Now().UTC().Format(time.RFC1123))
 
 	// Concatenate json strings by ourselves, should be fast than json.Marshall?
 	w.Header().Set("Content-Type", "application/json")

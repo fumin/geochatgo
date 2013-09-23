@@ -76,7 +76,8 @@ function getChatlogs(latLng, box) {
       }
     }
   };
-  req.open("GET", "/chatlogs/"+zoom+"/"+tilePoint.x+"/"+tilePoint.y+".json?limit=200");
+  // We should be using GET here, this is just to circumvent openshift's cache.
+  req.open("POST", "/chatlogs/"+zoom+"/"+tilePoint.x+"/"+tilePoint.y+".json?limit=200");
   req.send();
 
   var tileLatLngBounds = tilePointToLatLng(tilePoint, zoom);

@@ -74,6 +74,7 @@ var chatlogLayer = L.ajaxTileLayer("/chatlogs/{z}/{x}/{y}.json", {
       markers.addChat(data[i]);
     }
   },
+  httpMethod: "POST", // Circumvent the bastard openshift cache...
 }).addTo(g_map);
 g_map.on('viewreset', function(e) { // called upon zoom level change
   // Since the data we want to present is probably different at different

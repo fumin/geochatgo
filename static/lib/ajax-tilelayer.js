@@ -33,7 +33,8 @@ L.TileLayer.Ajax = L.TileLayer.extend({
   _requests: {},
   options: {
     unloadInvisibleTiles: false, // since we don't really unload ajax data yet
-    success: function(){}
+    success: function(){},
+    httpMethod: "GET",
   },
 
   initialize: function (url, options) {
@@ -66,7 +67,7 @@ L.TileLayer.Ajax = L.TileLayer.extend({
       }
     };
     this._adjustTilePoint(tilePoint); // Sets the z index
-    req.open('GET', this.getTileUrl(tilePoint), true);
+    req.open(this.options.httpMethod, this.getTileUrl(tilePoint), true);
     req.send();
   },
 
