@@ -15,6 +15,8 @@ import (
 
 func init() {
 	initConfig()
+	http.HandleFunc("/open_popup", openPopup)
+	http.HandleFunc("/close_popup", closePopup)
 	http.HandleFunc("/update_mapbounds", updateMapbounds)
 	http.HandleFunc("/stream", stream)
 	http.HandleFunc("/say", say)
@@ -22,6 +24,42 @@ func init() {
 	http.Handle("/static/",
 		http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.HandleFunc("/", index)
+}
+
+func openPopup(w http.ResponseWriter, r *http.Request) {
+	username, err := requiredStringParam("username", r, w)
+	if err != nil {
+		return
+	}
+	south, west, north, east, err := requiredLatLngBoundsParam(r, w)
+	if err != nil {
+		return
+	}
+
+	point := [2]float64{south, west}
+	lengths := [2]float64{north - south, east - west}
+	popupId, err := rTree.insertPopup(username, point, lengths)
+	if err != nil {
+		glog.Warningf("%v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	jsonResp(w, map[string]interface{}{"popupId": popupId})
+}
+
+func closePopup(w http.ResponseWriter, r *http.Request) {
+	username, err := requiredStringParam("username", r, w)
+	if err != nil {
+		return
+	}
+	popupId, err := requiredStringParam("popupId", r, w)
+	if err != nil {
+		return
+	}
+
+	rTree.delPopup(username, popupId)
+	jsonResp(w, map[string]interface{}{"ok": true})
 }
 
 func updateMapbounds(w http.ResponseWriter, r *http.Request) {
@@ -37,8 +75,8 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 	// Users' presences should be handled solely by the endpoint "/stream".
 	// Therefore we "update", which requires that the key exist in the Rtree,
 	// instead of "insert" the bounds of the user's map here.
-	rtree := detectRtreeType(r)
-	err = rtree.update(username, [2]float64{south, west}, [2]float64{north - south, east - west})
+	lengths := [2]float64{north - south, east - west}
+	err = rTree.update(username, [2]float64{south, west}, lengths)
 	if err != nil {
 		glog.Warningf("%v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -58,10 +96,9 @@ func stream(w http.ResponseWriter, r *http.Request) {
 
 	// Insert client into Rtree with an map bounds [0, 0, 0.1, 0.1].
 	// The client will update the correct bounds after we inform her/his username.
-	msg := make(chan []byte, 32)
-	rtree := detectRtreeType(r)
-	rtree.insert(username, msg, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
-	defer rtree.del(username) // when the EventSource connection is lost.
+	channel := make(chan recvMsg_t, 32)
+	rTree.insert(username, channel, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+	defer rTree.del(username) // when the EventSource connection is lost.
 
 	// Inform client what her/his username is. Throughout the entire session,
 	// clients should use this string as the identifier of themselves.
@@ -74,8 +111,8 @@ func stream(w http.ResponseWriter, r *http.Request) {
 L:
 	for {
 		select {
-		case contents := <-msg:
-			err = sse.EventWrite("custom", contents)
+		case msg := <-channel:
+			err = sse.EventWrite(msg.kind, msg.content)
 			if err != nil {
 				break L
 			}
@@ -110,21 +147,21 @@ func say(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Broadcast message to others.
-	neighbors := nnRtree.nearestNeighbors(100, [2]float64{lat, lng})
+	neighbors := rTree.nearestNeighbors(100, [2]float64{lat, lng})
 	b, _ := json.Marshal(data)
 	for _, neighbor := range neighbors {
-		if neighbor.key == r.FormValue("username") {
+		if neighbor.receiver.key == r.FormValue("username") {
 			continue
 		}
 		select {
-		case neighbor.channel <- b:
+		case neighbor.receiver.channel <- recvMsg_t{"custom", b}:
 		default:
 		}
 	}
-	fans := intersectRtree.searchContaining(100, [2]float64{lat, lng})
-	for _, fan := range fans {
+	popups := rTree.searchContaining(100, [2]float64{lat, lng})
+	for _, popup := range popups {
 		select {
-		case fan.channel <- b:
+		case popup.channel <- recvMsg_t{popup.key, b}:
 		default:
 		}
 	}
@@ -164,14 +201,6 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	bw.Write([]byte{'['})
 	bw.Write([]byte(strings.Join(v, ",")))
 	bw.Write([]byte{']'})
-}
-
-func detectRtreeType(r *http.Request) *rtree_t {
-	rtree := nnRtree
-	if r.FormValue("rtreeType") == "intersectRTree" {
-		rtree = intersectRtree
-	}
-	return rtree
 }
 
 func requiredLatLngBoundsParam(r *http.Request, w http.ResponseWriter) (float64, float64, float64, float64, error) {

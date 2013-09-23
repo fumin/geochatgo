@@ -15,3 +15,24 @@ var debounce = function(func, wait) {
     timeout = setTimeout(later, wait);
   };
 };
+
+uriSerialize = function(obj) {
+  var str = [];
+  for(var p in obj){
+    if (obj.hasOwnProperty(p)) {
+      str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+    }
+  }
+  return str.join("&");
+}
+
+postHTTP = function(path, params, onreadystatechange) {
+  var paramStr = uriSerialize(params);
+  var req = new XMLHttpRequest();
+  if (onreadystatechange != undefined) {
+    req.onreadystatechange = function(){onreadystatechange(req);};
+  }
+  req.open("POST", path);
+  req.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  req.send(paramStr);
+}

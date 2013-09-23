@@ -18,9 +18,9 @@ func TestUpdate(t *testing.T) {
 	// The rectangle of the key should be the same as inserted.
 	tree := NewRtree()
 	key := "key"
-	tree.insert(key, make(chan []byte), [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+	tree.insert(key, make(chan recvMsg_t), [2]float64{0, 0}, [2]float64{0.1, 0.1})
 	expectedRect, _ := rtreego.NewRect([]float64{0.0, 0.0}, []float64{0.1, 0.1})
-	rect := tree.keyMap[key].where
+	rect := tree.keyMap[key].receiver.where
 	if !rect.Equal(expectedRect) {
 		t.Errorf("Expected %v == %v", rect, expectedRect)
 	}
@@ -31,7 +31,7 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("Expected tree.update to succeed, but go %v", err)
 	}
 	expectedRect, _ = rtreego.NewRect([]float64{0.0, 0.0}, []float64{1.0, 1.0})
-	rect = tree.keyMap[key].where
+	rect = tree.keyMap[key].receiver.where
 	if !rect.Equal(expectedRect) {
 		t.Errorf("Expected %v == %v", rect, expectedRect)
 	}
@@ -40,7 +40,7 @@ func TestUpdate(t *testing.T) {
 func TestDel(t *testing.T) {
 	tree := NewRtree()
 	key := "key"
-	tree.insert(key, make(chan []byte), [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+	tree.insert(key, make(chan recvMsg_t), [2]float64{0, 0}, [2]float64{0.1, 0.1})
 	_, ok := tree.keyMap[key]
 	if !ok {
 		t.Errorf("Expected %v in %v, but no found.", key, tree.keyMap)
@@ -61,32 +61,112 @@ func TestDel(t *testing.T) {
 
 func TestNearestNeighbors(t *testing.T) {
 	tree := NewRtree()
-	channelA := make(chan []byte, 1)
-	channelB := make(chan []byte, 1)
+	channelA := make(chan recvMsg_t, 1)
+	channelB := make(chan recvMsg_t, 1)
 	tree.insert("a", channelA, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
 	tree.insert("b", channelB, [2]float64{1, 1}, [2]float64{1.1, 1.1})
 
 	// Nearest neighbors of {0.01, 0.01} should be [a, b]
-	receivers := tree.nearestNeighbors(10, [2]float64{0.01, 0.01})
-	if l := len(receivers); 2 != l {
-		t.Errorf("len(%v) != 2", receivers)
+	clients := tree.nearestNeighbors(10, [2]float64{0.01, 0.01})
+	if l := len(clients); 2 != l {
+		t.Errorf("len(%v) != 2", clients)
 	}
-	receivers[0].channel <- []byte("hello")
-	if msg := string(<-channelA); msg != "hello" {
+	clients[0].receiver.channel <- recvMsg_t{"kind", []byte("hello")}
+	if msg := <-channelA; string(msg.content) != "hello" {
 		t.Errorf("%v != \"hello\"", msg)
 	}
-	receivers[1].channel <- []byte("world")
-	if msg := string(<-channelB); msg != "world" {
+	clients[1].receiver.channel <- recvMsg_t{"kind", []byte("world")}
+	if msg := <-channelB; string(msg.content) != "world" {
 		t.Errorf("%v != \"world\"", msg)
 	}
 
 	// Nearest neighbors of {1.01, 1.01} should be [b]
-	receivers = tree.nearestNeighbors(1, [2]float64{1.01, 1.01})
-	receivers[0].channel <- []byte("go!")
+	clients = tree.nearestNeighbors(1, [2]float64{1.01, 1.01})
+	clients[0].receiver.channel <- recvMsg_t{"kind", []byte("go!")}
 	if l := len(channelA); l != 0 {
 		t.Errorf("%v != 0", l)
 	}
-	if msg := string(<-channelB); msg != "go!" {
+	if msg := <-channelB; string(msg.content) != "go!" {
 		t.Errorf("%v != \"go!\"", msg)
+	}
+}
+
+func TestUpdateDoesNotAlterPopups(t *testing.T) {
+	tree := NewRtree()
+	channelA := make(chan recvMsg_t, 1)
+	tree.insert("a", channelA, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+	popupId, _ := tree.insertPopup("a", [2]float64{3, 3}, [2]float64{0.1, 0.1})
+
+	tree.update("a", [2]float64{2.2, 2.2}, [2]float64{0.1, 0.1})
+
+	clientA := tree.nearestNeighbors(1, [2]float64{1.9, 1.9})[0]
+	popupA := clientA.popups[0]
+
+	if popupId != popupA.key {
+		t.Errorf("%v != %v", popupId, popupA.key)
+	}
+
+	expectedRect, _ := rtreego.NewRect([]float64{3.0, 3.0}, []float64{0.1, 0.1})
+	rect := popupA.where
+	if !rect.Equal(expectedRect) {
+		t.Errorf("Expected %v == %v", rect, expectedRect)
+	}
+
+	popupA.channel <- recvMsg_t{"kind", []byte("hello")}
+	if msg := <-channelA; string(msg.content) != "hello" {
+		t.Errorf("%v != \"hello\"", msg)
+	}
+}
+
+func TestDelPopup(t *testing.T) {
+	tree := NewRtree()
+	channel := make(chan recvMsg_t, 1)
+	tree.insert("a", channel, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+	idA, _ := tree.insertPopup("a", [2]float64{1, 1}, [2]float64{0.1, 0.1})
+	idB, _ := tree.insertPopup("a", [2]float64{1, 1}, [2]float64{0.2, 0.2})
+	idC, _ := tree.insertPopup("a", [2]float64{1, 1}, [2]float64{0.3, 0.3})
+
+	tree.delPopup("a", idB)
+
+	popups1 := tree.keyMap["a"].popups
+	popups2 := tree.searchContaining(10, [2]float64{1.01, 1.01})
+	for _, popups := range []([]*receiver_t){popups1, popups2} {
+		if l := len(popups); l != 2 {
+			t.Errorf("%v != 2", l)
+		}
+		if idA != popups[0].key {
+			t.Errorf("%v != %v", idA, popups[0].key)
+		}
+		if idC != popups[1].key {
+			t.Errorf("%v != %v", idC, popups[1].key)
+		}
+
+		if a, b := popups[0].channel, popups1[0].channel; a != b {
+			t.Errorf("%v != %v", a, b)
+		}
+		if a, b := popups[1].channel, popups1[1].channel; a != b {
+			t.Errorf("%v != %v", a, b)
+		}
+	}
+}
+
+func TestDelRemovesPopups(t *testing.T) {
+	tree := NewRtree()
+	for _, key := range []string{"a", "b"} {
+		channel := make(chan recvMsg_t, 1)
+		tree.insert(key, channel, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+		tree.insertPopup(key, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+		if key == "a" {
+			tree.insertPopup(key, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
+		}
+	}
+	if l := tree.popupRtree.Size(); l != 3 {
+		t.Errorf("%d != 3", l)
+	}
+
+	tree.del("a")
+
+	if l := tree.popupRtree.Size(); l != 1 {
+		t.Errorf("%d != 1", l)
 	}
 }

@@ -72,11 +72,11 @@
 
 .chat-history > .content {
   background: red;
+  overflow: scroll;
+  height: 200px;
 }
 
 .chat-history > .content > .list-container {
-  height: 200px;
-  overflow: scroll;
 }
 
 .chat-history > .handler {

@@ -1,5 +1,19 @@
+function adjustPopupPosition(latLng, box) {
+  box.style.position = "absolute";
+  var p = g_map.latLngToContainerPoint(latLng);
+  var px = p.x + Math.floor(Math.random() * 34) - 17;
+  var py = p.y + Math.floor(Math.random() * 34) - 17;
+  var x = (px > 100 ? px - 100 : px + 100);
+  var y = (py > 30 ? py - 30 : Math.max(py, 20));
+  box.style.left = x + "px";
+  box.style.top = y + "px";
+  console.log(box.style);
+}
+
+g_maxPopupZindex = 0;
+
 // Creates a draggable popup and returns the top level div element.
-function createChatlogPopupUI() {
+function createChatlogPopupUI(latLng) {
   var box = document.createElement("div");
   box.classList.add("chat-history");
 
@@ -21,10 +35,19 @@ function createChatlogPopupUI() {
   handler.appendChild(closeBtn);
   box.appendChild(handler);
   box.appendChild(boxContent);
-
   document.querySelector("#historical-arena").appendChild(box);
+
+  adjustPopupPosition(latLng, box);
+
   var draggie = new Draggabilly(box, {
     handle: "#" + id
+  });
+  draggie.on("dragStart", function(draggieInstance, event, pointer){
+    var zIndexStr = box.style.zIndex;
+    var zIndex = zIndexStr == "" ? g_maxPopupZindex : parseInt(zIndexStr)
+    var newMaxPopupZindex = Math.max(zIndex, g_maxPopupZindex+1);
+    box.style.zIndex = newMaxPopupZindex + "";
+    g_maxPopupZindex = newMaxPopupZindex;
   });
 
   closeBtn.addEventListener("click", function(el){
@@ -57,27 +80,41 @@ function getChatlogs(latLng, box) {
   req.send();
 
   var tileLatLngBounds = tilePointToLatLng(tilePoint, zoom);
-  var source = new EventSource("/stream?rtreeType=intersectRTree");
-  source.addEventListener("username", function(e){
-    var username = e.data;
-    updateMapbounds(username, tileLatLngBounds, "intersectRTree");
-  }, false);
-  source.addEventListener("custom", function(e){
-    var data = JSON.parse(e.data);
-    var div = document.createElement("div");
-    div.innerHTML = linkify(data.msg);
-    listContainer.insertBefore(div, listContainer.firstChild);
-  }, false);
+  postHTTP("open_popup", {
+      username: g_username,
+      south: tileLatLngBounds.getSouth(),
+      west:  tileLatLngBounds.getWest(),
+      north: tileLatLngBounds.getNorth(),
+      east:  tileLatLngBounds.getEast(),
+    },
+    function(req) {
+      if (req.readyState != 4) { return; }
+      if (req.status == 200) {
+        var data = JSON.parse(req.responseText);
+        var popupId = data["popupId"];
+        console.log("popupId = " + popupId);
 
-  var closeBtn = box.querySelector(".chat-history > .handler > .close");
-  closeBtn.addEventListener("click", function(el){
-    source.close();
-  });
+        var listener = function(e) {
+          var data = JSON.parse(e.data);
+          var div = document.createElement("div");
+          div.innerHTML = linkify(data.msg);
+          listContainer.insertBefore(div, listContainer.firstChild);
+        };
+        g_source.addEventListener(popupId, listener, false);
+
+        var closeBtn = box.querySelector(".chat-history > .handler > .close");
+        closeBtn.addEventListener("click", function(el){
+          g_source.removeEventListener(popupId, listener);
+          postHTTP("close_popup", {username: g_username, popupId: popupId});
+        });
+      }
+    });
 }
 
 $(document).ready(function() {
   g_map.markers.on("clusterclick", function(mouseEvent){
-    var box = createChatlogPopupUI();
-    getChatlogs(mouseEvent.latlng, box);
+    var latlng = mouseEvent.latlng;
+    var box = createChatlogPopupUI(latlng);
+    getChatlogs(latlng, box);
   });
 });
