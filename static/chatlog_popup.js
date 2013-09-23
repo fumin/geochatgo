@@ -50,10 +50,12 @@ function createChatlogPopupUI(latLng) {
     g_maxPopupZindex = newMaxPopupZindex;
   });
 
-  closeBtn.addEventListener("click", function(el){
+  var closeListener = function(el){
     draggie.disable();
-    box.remove();
-  });
+    box.parentNode.removeChild(box);
+  };
+  closeBtn.addEventListener("click", closeListener);
+  closeBtn.addEventListener("touchend", closeListener);
 
   return box;
 }
