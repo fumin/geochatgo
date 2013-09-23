@@ -188,11 +188,12 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  // These no cache headers do not work for openshift...
+	// These no cache headers do not work for openshift...
 	// w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	// w.Header().Set("Pragma", "no-cache")
 	// w.Header().Set("Expires", "0")
-  w.Header().Set("ETag", string(randByteSlice()))
+	// w.Header().Set("ETag", string(randByteSlice()))
+	w.Header().Set("Last-Modified", time.Now().Format(time.RFC1123))
 
 	// Concatenate json strings by ourselves, should be fast than json.Marshall?
 	w.Header().Set("Content-Type", "application/json")
