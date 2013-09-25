@@ -67,7 +67,7 @@
 }
 
 .chat-history {
-  resize: both;
+  /*resize: both; unfortunately this is not supported in mobile browsers...*/
 }
 
 .chat-history > .content {
@@ -80,7 +80,7 @@
 }
 
 .chat-history > .handler {
-  height: 40px;
+  height: 35px;
   background: blue;
 }
 
@@ -91,4 +91,13 @@
 .chat-history > .handler > .close:hover {
   cursor: move;
   background: #0AF;
+}
+
+.chat-history > .resize-handler {
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  background: green;
 }
