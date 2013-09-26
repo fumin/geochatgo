@@ -84,7 +84,7 @@ g_map.on('viewreset', function(e) { // called upon zoom level change
   }
 });
 
-navigator.geolocation.watchPosition(function(position){
+function geo_success(position){
   g_latitude = position.coords.latitude;
   g_longitude = position.coords.longitude;
 
@@ -103,7 +103,19 @@ navigator.geolocation.watchPosition(function(position){
       markers.addChat(data);
     }, false);
   }
-});
+}
+
+function geo_error() {
+  alert("Sorry, no position available.");
+}
+
+var geo_options = {
+  enableHighAccuracy: true,
+  maximumAge:         9000,
+  timeout:            6000,
+};
+
+navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
 
 g_map.on('moveend', debounce(function(e) {
   if (typeof g_username == "undefined") { return; }
