@@ -1,3 +1,10 @@
+#location-instructions {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 250px;
+}
+
 @-webkit-keyframes newchat-animation {
   0% { font-size: 200%; width: 200px; color: red; }
   100% { font-size: 100%; width: 100px; color: black; }

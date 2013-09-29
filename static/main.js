@@ -13,6 +13,7 @@ L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/997/
   maxZoom: 18,
   attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>'
 }).addTo(g_map);
+g_map.setView([25.041846, 121.539001], 13); // Initialize map to Taipei
 L.control.scale().addTo(g_map);
 
 // markers is the layer that displays the chatlogs on the map.
@@ -105,17 +106,22 @@ function geo_success(position){
   }
 }
 
-function geo_error() {
-  alert("Sorry, no position available.");
+function geo_error(err) {
 }
 
 var geo_options = {
   enableHighAccuracy: true,
-  maximumAge:         9000,
-  timeout:            6000,
 };
 
-navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
+navigator.geolocation.getCurrentPosition(function(position) {
+    navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
+  },function(err) {
+    var errMsg = "Error(" + err.code + '): ' + err.message;
+    document.querySelector("#msg").value = errMsg;
+    document.querySelector("#location-instructions> .title").innerHTML = errMsg;
+    document.querySelector("#location-instructions").style.display = "";
+  }
+);
 
 g_map.on('moveend', debounce(function(e) {
   if (typeof g_username == "undefined") { return; }
