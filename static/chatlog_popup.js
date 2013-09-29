@@ -74,7 +74,7 @@ function getChatlogs(latLng, box) {
   var selector = ".chat-history > .content > .list-container"
   var listContainer = box.querySelector(selector);
 
-  var zoom = g_map.getZoom() + 1; // +1 to increase the granularity of popups.
+  var zoom = g_map.getZoom();
   var tilePoint = latLngToTileNumber(latLng, zoom);
   var req = new XMLHttpRequest();
   req.onreadystatechange = function() {
@@ -124,10 +124,13 @@ function getChatlogs(latLng, box) {
     });
 }
 
+var markerClickListener = function(mouseEvent){
+  var latlng = mouseEvent.latlng;
+  var box = createChatlogPopupUI(latlng);
+  getChatlogs(latlng, box);
+};
+
 $(document).ready(function() {
-  g_map.markers.on("clusterclick", function(mouseEvent){
-    var latlng = mouseEvent.latlng;
-    var box = createChatlogPopupUI(latlng);
-    getChatlogs(latlng, box);
-  });
+  g_map.markers.on("clusterclick", markerClickListener);
+  g_map.markers.on("click", markerClickListener);
 });

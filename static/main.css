@@ -84,6 +84,7 @@
 }
 
 .chat-history > .content > .list-container {
+  width: 100px;
 }
 
 .chat-history > .handler {

@@ -114,6 +114,7 @@ var geo_options = {
 };
 
 navigator.geolocation.getCurrentPosition(function(position) {
+    geo_success(position);
     navigator.geolocation.watchPosition(geo_success, geo_error, geo_options);
   },function(err) {
     var errMsg = "Error(" + err.code + '): ' + err.message;
