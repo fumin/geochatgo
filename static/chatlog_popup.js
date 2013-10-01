@@ -32,14 +32,6 @@ function createChatlogPopupUI(latLng) {
   listContainer.classList.add("list-container");
   boxContent.appendChild(listContainer);
 
-  // Resort to JS since some agents don't support the CSS3 resize property.
-  var resizeHandler = document.createElement("div");
-  resizeHandler.classList.add("resize-handler");
-  box.appendChild(resizeHandler);
-  var removeListeners = makeResizable(box, { handle: resizeHandler,
-                                             heightEl: boxContent,
-                                             minWidth: 30, minHeight: 40 });
-
   handler.appendChild(closeBtn);
   box.appendChild(handler);
   box.appendChild(boxContent);
@@ -57,6 +49,15 @@ function createChatlogPopupUI(latLng) {
     box.style.zIndex = newMaxPopupZindex + "";
     g_maxPopupZindex = newMaxPopupZindex;
   });
+
+  // Resort to JS since some agents don't support the CSS3 resize property.
+  var resizeHandler = document.createElement("div");
+  resizeHandler.classList.add("resize-handler");
+  box.appendChild(resizeHandler);
+  var removeListeners = makeResizable(listContainer,
+                                      { handle: resizeHandler,
+                                        heightEl: boxContent,
+                                        minWidth: 30, minHeight: 40 });
 
   var closeListener = function(el){
     removeListeners();
