@@ -159,7 +159,7 @@ func (t *rtree_t) searchContaining(k int, point [2]float64) []*receiver_t {
 	rect, _ := rtreego.NewRect(point[:], []float64{margin, margin})
 	t.RLock()
 	defer t.RUnlock()
-	spacials := t.popupRtree.SearchIntersect(rect)
+	spacials := t.popupRtree.SearchIntersectWithLimit(k, rect)
 	return removeNilsAndCastToReceivers(spacials)
 }
 

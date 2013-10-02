@@ -102,6 +102,7 @@ func TestUpdateDoesNotAlterPopups(t *testing.T) {
 	clientA := tree.nearestNeighbors(1, [2]float64{1.9, 1.9})[0]
 	popupA := clientA.popups[0]
 
+	// Check that the key, rectangle, and channel of popupA is as expected.
 	if popupId != popupA.key {
 		t.Errorf("%v != %v", popupId, popupA.key)
 	}
@@ -128,6 +129,7 @@ func TestDelPopup(t *testing.T) {
 
 	tree.delPopup("a", idB)
 
+	// popups1 and popups2 should be fully identical.
 	popups1 := tree.keyMap["a"].popups
 	popups2 := tree.searchContaining(10, [2]float64{1.01, 1.01})
 	for _, popups := range []([]*receiver_t){popups1, popups2} {
@@ -160,12 +162,14 @@ func TestDelRemovesPopups(t *testing.T) {
 			tree.insertPopup(key, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
 		}
 	}
+	// a has 2 popups and b has 1, thus the total of popups in the tree is 3.
 	if l := tree.popupRtree.Size(); l != 3 {
 		t.Errorf("%d != 3", l)
 	}
 
 	tree.del("a")
 
+	// Since a is deleted, we are left the single popup of b.
 	if l := tree.popupRtree.Size(); l != 1 {
 		t.Errorf("%d != 1", l)
 	}
