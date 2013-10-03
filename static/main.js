@@ -67,7 +67,7 @@ markers["addChat"] = function(datum) {
 // chatlogLayer isn't for display but for retrieving historical chatlogs for
 // each tile from the server by reusing code from Leaflet's TileLayer.
 var chatlogLayer = L.ajaxTileLayer("/chatlogs/{z}/{x}/{y}.json", {
-  maxZoom: 15,
+  maxZoom: 18,
   success: function(data_unparsed) {
     var data = JSON.parse(data_unparsed);
     var len = data.length;
