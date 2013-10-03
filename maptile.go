@@ -2,13 +2,40 @@ package geochat
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"math"
 )
 
-const MaxZoom = 15
+const MaxZoom = 18
+
+type redisConn struct {
+	c   redis.Conn
+	err error
+}
+
+func (c *redisConn) send(cmd string, args ...interface{}) {
+	if c.err != nil {
+		return
+	}
+	c.err = c.c.Send(cmd, args...)
+}
+
+func (c *redisConn) flush() {
+	if c.err != nil {
+		return
+	}
+	c.err = c.c.Flush()
+}
+
+func (c *redisConn) recv() interface{} {
+	if c.err != nil {
+		return nil
+	}
+	reply, err := c.c.Receive()
+	c.err = err
+	return reply
+}
 
 // Stores a jsonable object according to its latitude and longitude.
 // Assuming the object is at latitude: 25.2, longitude: 121.4
@@ -29,41 +56,31 @@ func maptileStore(keyPrefix string, obj map[string]interface{},
 	conn redis.Conn) error {
 	latitude, ok := obj["latitude"].(float64)
 	if !ok {
-		return errors.New(fmt.Sprintf("No latitude in %v", obj))
+		panic(fmt.Sprintf("No latitude in %v", obj))
 	}
 	longitude, ok := obj["longitude"].(float64)
 	if !ok {
-		return errors.New(fmt.Sprintf("No longitude in %v", obj))
+		panic(fmt.Sprintf("No longitude in %v", obj))
 	}
 	data, err := json.Marshal(obj)
 	if err != nil {
 		return err
 	}
 	p := LatLng{latitude, longitude}
+	c := &redisConn{c: conn}
 
 	for z := 1; z <= MaxZoom; z++ {
 		x, y := LatLngToTile(z, p)
 		redisKey := fmt.Sprintf("%v:%d:%d:%d", keyPrefix, z, x, y)
-		err = conn.Send("LPUSH", redisKey, data)
-		if err != nil {
-			return err
-		}
-		err = conn.Send("LTRIM", redisKey, 0, 499)
-		if err != nil {
-			return err
-		}
+		c.send("LPUSH", redisKey, data)
+		c.send("LTRIM", redisKey, 0, 499)
 	}
-	err = conn.Flush()
-	if err != nil {
-		return err
-	}
+	c.flush()
 	for z := 1; z <= MaxZoom; z++ {
-		_, err = conn.Receive()
-		if err != nil {
-			return err
-		}
+		c.recv() // response of LPUSH
+		c.recv() // response of LTRIM
 	}
-	return nil
+	return c.err
 }
 
 func maptileRead(keyPrefix string, z int, x int, y int,
