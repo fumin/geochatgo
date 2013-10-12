@@ -5,6 +5,7 @@
   width: 250px;
 }
 
+/* obselete animation effects
 @-webkit-keyframes newchat-animation {
   0% { font-size: 200%; width: 200px; color: red; }
   100% { font-size: 100%; width: 100px; color: black; }
@@ -23,6 +24,7 @@
   
   width: 100%;
 }
+*/
 
 /* Position for message container */
 .messagebox{
