@@ -95,7 +95,7 @@ function formatChatlog(data) {
   var dt = year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
   var dtDiv = document.createElement("div");
   dtDiv.classList.add("chat-data-created_at");
-  dtDiv.innerHTML = dt;
+  dtDiv.innerHTML = dt + " ";
   div.appendChild(dtDiv);
 
   var msgDiv = document.createElement("div");

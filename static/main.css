@@ -114,6 +114,7 @@
   width: 0;
   height: 0;
   border: 15px solid;
+  top: 258px;
   bottom: -30px;
   left: 25px;
   border-color: #666 transparent transparent #666;
@@ -124,10 +125,10 @@
   position: absolute;
   width: 0;
   height: 0;
-  border: 10px solid;
+  border: 11px solid;
   border-color: #fff transparent transparent #fff;
   left: 29px;
-  top: 49px;
+  top: 257px;
 }
 
 /* Taipei 101
@@ -182,6 +183,7 @@
   /*resize: both; unfortunately this is not supported in mobile browsers...*/
   border: 1px solid #CCCCCC;
   box-shadow: 4px 4px 33px #8B8B8B;
+  cursor: move;
 }
 
 .chat-history > .content {
@@ -200,11 +202,12 @@
   font-size: 20px;
   padding-right: 8px;
   text-align: right;
-  width: 30px;
+  width: 22px;
   height: 24px;
 }
 .chat-history > .close-chat:hover {
-  background-color: #00AAFF;
+  background-color: red;
+  border-radius: 50%;
   cursor: pointer;
 }
 
@@ -226,8 +229,10 @@
 .chat-data-created_at {
   width: 170px;
   display: inline-block;
+  cursor: text;
 }
 
 .chat-data-msg {
   display: inline-block;
+  cursor: text;
 }
