@@ -24,7 +24,7 @@ function createChatlogPopupUI(latLng) {
 
   var closeBtn = document.createElement("div");
   closeBtn.classList.add("close");
-  closeBtn.innerHTML = "X";
+  closeBtn.innerHTML = "×";
 
   var boxContent = document.createElement("div");
   boxContent.classList.add("content");

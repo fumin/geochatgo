@@ -5,6 +5,21 @@
   width: 250px;
 }
 
+.leaflet-control-locate {
+  background-color: #FFFFFF;
+  border-radius: 4px 44px 4px 4px;
+  box-shadow: 0 1px 7px rgba(0, 0, 0, 0.65);
+  display: block;
+  height: 28px;
+  text-align: center;
+  text-decoration: none;
+  width: 28px;
+}
+
+.leaflet-control-locate:hover {
+  background-color: #EEEEEE;
+}
+
 .current-location-icon {
   font-size: 30px;
   color: blue;
@@ -32,10 +47,6 @@
 */
 
 .roof {
-}
-
-.oldest-chat {
-  background: green;
 }
 
 /* Position for message container */
@@ -75,6 +86,53 @@
 }
 
 .msg-history {
+  position: relative;
+  width: 250px;
+  height: 55px;
+  padding: 10px;
+  text-align: center;
+  background-color: #fff;
+  border: 3px solid #666;
+  border-radius: 15px;
+  box-shadow: 2px 2px 4px #888;
+  margin-top: -3px;
+  font-size: 18px;
+  opacity: 0.96;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg-history:hover {
+  background-color: #EEEEEE;
+}
+
+.oldest-chat:before {
+  content: ' ';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 15px solid;
+  bottom: -30px;
+  left: 25px;
+  border-color: #666 transparent transparent #666;
+}
+
+.oldest-chat:after {
+  content: ' ';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 10px solid;
+  border-color: #fff transparent transparent #fff;
+  left: 29px;
+  top: 49px;
+}
+
+/* Taipei 101
+ *
+.msg-history {
   background-color: lightblue;
   font-size: 20px;
   width: 120px;
@@ -112,7 +170,7 @@
   border-right: 5px solid transparent;
   position: absolute;
   left: 120px;
-}
+} */
 
 /* chat history boxes */
 #historical-arena {
@@ -122,12 +180,15 @@
 
 .chat-history {
   /*resize: both; unfortunately this is not supported in mobile browsers...*/
+  border: 1px solid #CCCCCC;
+  box-shadow: 4px 4px 33px #8B8B8B;
 }
 
 .chat-history > .content {
-  background: red;
-  overflow: scroll;
+  background: none repeat scroll 0 0 #EEEEEE;
   height: 200px;
+  overflow: scroll;
+  padding: 7px;
 }
 
 .chat-history > .content > .list-container {
@@ -135,13 +196,16 @@
 }
 
 .chat-history > .handler {
-  height: 35px;
-  background: blue;
+  background: none repeat scroll 0 0 #FFFFFF;
+  height: 24px;
 }
 
 .chat-history > .handler > .close {
   float: right;
-  font-size: 30px;
+  font-size: 20px;
+  padding-right: 4px;
+  text-align: right;
+  width: 30px;
 }
 .chat-history > .handler > .close:hover {
   cursor: move;
