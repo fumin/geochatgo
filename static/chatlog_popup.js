@@ -83,7 +83,7 @@ function prepadZero(i) {
   return i < 10 ? "0" + i : i;
 }
 
-function formatChatlog(div, data) {
+function formatChatlog(data) {
   var div = document.createElement("div");
   div.classList.add("chat-data");
 
@@ -104,6 +104,8 @@ function formatChatlog(div, data) {
   msgDiv.classList.add("chat-data-msg");
   msgDiv.innerHTML = linkify(data.msg);
   div.appendChild(msgDiv);
+
+  return div;
 }
 
 function getChatlogs(latLng, box) {
