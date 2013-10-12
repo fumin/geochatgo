@@ -19,16 +19,12 @@ function createChatlogPopupUI(latLng) {
 
   var closeBtn = document.createElement("div");
   closeBtn.classList.add("close-chat");
-  closeBtn.innerHTML = "×";
 
-  var boxContent = document.createElement("div");
-  boxContent.classList.add("content");
   var listContainer = document.createElement("div");
   listContainer.classList.add("list-container");
-  boxContent.appendChild(listContainer);
 
   box.appendChild(closeBtn);
-  box.appendChild(boxContent);
+  box.appendChild(listContainer);
   document.querySelector("#historical-arena").appendChild(box);
 
   adjustPopupPosition(latLng, box);
@@ -62,7 +58,7 @@ function createChatlogPopupUI(latLng) {
   box.appendChild(resizeHandler);
   var removeListeners = makeResizable(listContainer,
                                       { handle: resizeHandler,
-                                        heightEl: boxContent,
+                                        heightEl: listContainer,
                                         minWidth: 30, minHeight: 40 });
 
   var closeListener = function(el){
@@ -118,7 +114,7 @@ function formatChatlog(data) {
 }
 
 function getChatlogs(latLng, box) {
-  var selector = ".chat-history > .content > .list-container"
+  var selector = ".chat-history > .list-container";
   var listContainer = box.querySelector(selector);
 
   var zoom = g_map.getZoom();

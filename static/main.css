@@ -186,29 +186,29 @@
   cursor: move;
 }
 
-.chat-history > .content {
+.chat-history > .list-container {
   background: none repeat scroll 0 0 #EEEEEE;
   height: 200px;
   overflow: scroll;
   padding: 7px;
-}
 
-.chat-history > .content > .list-container {
   width: 300px;
 }
 
 .chat-history > .close-chat {
-  float: right;
   font-size: 20px;
   padding-right: 8px;
   text-align: right;
   width: 22px;
   height: 24px;
+  top: 0px;
+  right: 0px;
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
 }
 .chat-history > .close-chat:hover {
   background-color: red;
-  border-radius: 50%;
-  cursor: pointer;
 }
 
 .chat-history > .resize-handler {
