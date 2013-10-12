@@ -7,7 +7,7 @@
 
 .leaflet-control-locate {
   background-color: #FFFFFF;
-  border-radius: 4px 44px 4px 4px;
+  border-radius: 4px;
   box-shadow: 0 1px 7px rgba(0, 0, 0, 0.65);
   display: block;
   height: 28px;
@@ -108,7 +108,7 @@
   background-color: #EEEEEE;
 }
 
-.oldest-chat:before {
+.chat-tail:before {
   content: ' ';
   position: absolute;
   width: 0;
@@ -119,7 +119,7 @@
   border-color: #666 transparent transparent #666;
 }
 
-.oldest-chat:after {
+.chat-tail:after {
   content: ' ';
   position: absolute;
   width: 0;
@@ -206,10 +206,11 @@
   padding-right: 4px;
   text-align: right;
   width: 30px;
+  height: 24px;
 }
 .chat-history > .handler > .close:hover {
-  cursor: move;
-  background: #0AF;
+  background-color: #00AAFF;
+  cursor: pointer;
 }
 
 .chat-history > .resize-handler {
@@ -219,4 +220,20 @@
   right: 0;
   bottom: 0;
   background: green;
+}
+.chat-history > .resize-handler:hover {
+  background-color: #CCCCCC;
+  cursor: nw-resize;
+}
+
+.chat-data {
+}
+
+.chat-data-created_at {
+  width: 170px;
+  display: inline-block;
+}
+
+.chat-data-msg {
+  display: inline-block;
 }

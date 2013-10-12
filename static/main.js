@@ -34,6 +34,8 @@ var markers = new L.MarkerClusterGroup({
     }).slice(0, 5);
 
     var box = document.createElement("div");
+
+    // For UI creation of the Taipei 101
     var roof = document.createElement("div");
     roof.classList.add("roof");
     box.appendChild(roof);
@@ -53,6 +55,12 @@ var markers = new L.MarkerClusterGroup({
       }
       box.appendChild(chat);
     }
+
+    // For UI creation of the chat triangle.
+    var tail = document.createElement("div");
+    tail.classList.add("chat-tail");
+    box.appendChild(tail);
+
     return new L.DivIcon({
       className: "",
       // html: (new L.Icon.Default()).createIcon().outerHTML + box.outerHTML,
