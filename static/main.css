@@ -192,23 +192,18 @@
 }
 
 .chat-history > .content > .list-container {
-  width: 100px;
+  width: 300px;
 }
 
-.chat-history > .handler {
-  background: none repeat scroll 0 0 #FFFFFF;
-  height: 24px;
-}
-
-.chat-history > .handler > .close {
+.chat-history > .close-chat {
   float: right;
   font-size: 20px;
-  padding-right: 4px;
+  padding-right: 8px;
   text-align: right;
   width: 30px;
   height: 24px;
 }
-.chat-history > .handler > .close:hover {
+.chat-history > .close-chat:hover {
   background-color: #00AAFF;
   cursor: pointer;
 }

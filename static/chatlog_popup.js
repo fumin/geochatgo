@@ -17,13 +17,8 @@ function createChatlogPopupUI(latLng) {
   var box = document.createElement("div");
   box.classList.add("chat-history");
 
-  var handler = document.createElement("div");
-  handler.classList.add("handler");
-  var id = "log-handler" + Math.floor(Math.random() * 1000000);
-  handler.id = id;
-
   var closeBtn = document.createElement("div");
-  closeBtn.classList.add("close");
+  closeBtn.classList.add("close-chat");
   closeBtn.innerHTML = "×";
 
   var boxContent = document.createElement("div");
@@ -32,16 +27,13 @@ function createChatlogPopupUI(latLng) {
   listContainer.classList.add("list-container");
   boxContent.appendChild(listContainer);
 
-  handler.appendChild(closeBtn);
-  box.appendChild(handler);
+  box.appendChild(closeBtn);
   box.appendChild(boxContent);
   document.querySelector("#historical-arena").appendChild(box);
 
   adjustPopupPosition(latLng, box);
 
-  var draggie = new Draggabilly(box, {
-    handle: "#" + id
-  });
+  var draggie = new Draggabilly(box);
   draggie.on("dragStart", function(draggieInstance, event, pointer){
     var zIndexStr = box.style.zIndex;
     var zIndex = zIndexStr == "" ? g_maxPopupZindex : parseInt(zIndexStr)
@@ -61,6 +53,12 @@ function createChatlogPopupUI(latLng) {
   // Resort to JS since some agents don't support the CSS3 resize property.
   var resizeHandler = document.createElement("div");
   resizeHandler.classList.add("resize-handler");
+  // We have the draggie handler set on the entire box,
+  // since we want the action here to be resize, not drag, stopPropagation.
+  resizeHandler.onmousedown = function(ev) {
+    ev.cancelBubble = true;
+    ev.stopPropagation();
+  };
   box.appendChild(resizeHandler);
   var removeListeners = makeResizable(listContainer,
                                       { handle: resizeHandler,
@@ -104,6 +102,17 @@ function formatChatlog(data) {
   msgDiv.classList.add("chat-data-msg");
   msgDiv.innerHTML = linkify(data.msg);
   div.appendChild(msgDiv);
+
+  // We have the draggie on the entire box,
+  // since we want to allow to select the text in these divs, stopPropagation.
+  dtDiv.onmousedown = function(ev) {
+    ev.cancelBubble = true;
+    ev.stopPropagation();
+  }
+  msgDiv.onmousedown = function(ev) {
+    ev.cancelBubble = true;
+    ev.stopPropagation();
+  };
 
   return div;
 }
@@ -151,7 +160,7 @@ function getChatlogs(latLng, box) {
         };
         g_source.addEventListener(popupId, listener, false);
 
-        var closeBtn = box.querySelector(".chat-history > .handler > .close");
+        var closeBtn = box.querySelector(".chat-history > .close-chat");
         closeBtn.addEventListener("click", function(el){
           g_source.removeEventListener(popupId, listener);
           postHTTP("close_popup", {username: g_username, popupId: popupId});
