@@ -15,6 +15,7 @@ L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/1714
 }).addTo(g_map);
 g_map.setView([25.041846, 121.539001], 13); // Initialize map to Taipei
 L.control.scale().addTo(g_map);
+L.control.locate().addTo(g_map);
 
 // markers is the layer that displays the chatlogs on the map.
 // To avoid cluttering the map with too many chats, we display only the latest
@@ -49,7 +50,8 @@ var markers = new L.MarkerClusterGroup({
     }
     return new L.DivIcon({
       className: "",
-      html: (new L.Icon.Default()).createIcon().outerHTML + box.outerHTML
+      // html: (new L.Icon.Default()).createIcon().outerHTML + box.outerHTML,
+      html: box.outerHTML,
     });
   },
 });
@@ -85,6 +87,12 @@ g_map.on('viewreset', function(e) { // called upon zoom level change
   }
 });
 
+var currentLocationIcon = L.divIcon({
+  className: 'current-location-icon',
+  html: "●",
+});
+var currentLocationMarker = L.marker([25.041846, 121.539001], {icon: currentLocationIcon}).addTo(g_map);
+
 function geo_success(position){
   g_latitude = position.coords.latitude;
   g_longitude = position.coords.longitude;
@@ -104,6 +112,8 @@ function geo_success(position){
       markers.addChat(data);
     }, false);
   }
+
+  currentLocationMarker.setLatLng(new L.LatLng(g_latitude, g_longitude));
 }
 
 function geo_error(err) {

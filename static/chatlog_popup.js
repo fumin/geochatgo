@@ -71,6 +71,23 @@ function createChatlogPopupUI(latLng) {
   return box;
 }
 
+function prepadZero(i) {
+  return i < 10 ? "0" + i : i;
+}
+
+function formatChatlog(data) {
+  var date = new Date(data.created_at*1000);
+  var year = date.getFullYear();
+  var month = prepadZero(date.getMonth() + 1);
+  var day = prepadZero(date.getDate());
+  var hours = prepadZero(date.getHours());
+  var minutes = prepadZero(date.getMinutes());
+  var seconds = prepadZero(date.getSeconds());
+
+  var dt = year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+  return dt + ": " + linkify(data.msg);
+}
+
 function getChatlogs(latLng, box) {
   var selector = ".chat-history > .content > .list-container"
   var listContainer = box.querySelector(selector);
@@ -84,7 +101,7 @@ function getChatlogs(latLng, box) {
       var data = JSON.parse(req.responseText);
       for (var i = 0; i != data.length; ++i) {
         var d = document.createElement("div");
-        d.innerHTML = linkify(data[i].msg);
+        d.innerHTML = formatChatlog(data[i]);
         listContainer.appendChild(d);
       }
     }
@@ -111,7 +128,7 @@ function getChatlogs(latLng, box) {
         var listener = function(e) {
           var data = JSON.parse(e.data);
           var div = document.createElement("div");
-          div.innerHTML = linkify(data.msg);
+          div.innerHTML = formatChatlog(data);
           listContainer.insertBefore(div, listContainer.firstChild);
         };
         g_source.addEventListener(popupId, listener, false);

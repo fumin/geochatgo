@@ -5,6 +5,11 @@
   width: 250px;
 }
 
+.current-location-icon {
+  font-size: 30px;
+  color: blue;
+}
+
 /* obselete animation effects
 @-webkit-keyframes newchat-animation {
   0% { font-size: 200%; width: 200px; color: red; }
