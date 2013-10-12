@@ -15,7 +15,7 @@ L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/1714
 }).addTo(g_map);
 g_map.setView([25.041846, 121.539001], 13); // Initialize map to Taipei
 L.control.scale().addTo(g_map);
-L.control.locate().addTo(g_map);
+L.control.locate({position: "bottomright"}).addTo(g_map);
 
 // markers is the layer that displays the chatlogs on the map.
 // To avoid cluttering the map with too many chats, we display only the latest
@@ -34,11 +34,16 @@ var markers = new L.MarkerClusterGroup({
     }).slice(0, 5);
 
     var box = document.createElement("div");
+    var roof = document.createElement("div");
+    roof.classList.add("roof");
+    box.appendChild(roof);
+
     for (var i = 0; i != ms.length; ++i) {
       var chat = document.createElement("div");
       chat.classList.add("msg-history");
 
       if (i == 0) { chat.classList.add("newchat"); }
+      if (i == ms.length-1) { chat.classList.add("oldest-chat"); }
 
       if (ms[i].chatData.markerId) {
         chat.id = ms[i].chatData.markerId;

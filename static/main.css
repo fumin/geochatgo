@@ -31,6 +31,13 @@
 }
 */
 
+.roof {
+}
+
+.oldest-chat {
+  background: green;
+}
+
 /* Position for message container */
 .messagebox{
   padding: 0% 20%;
@@ -68,10 +75,39 @@
 }
 
 .msg-history {
+  background-color: lightblue;
   font-size: 20px;
   width: 120px;
+  height: 30px;
   text-align: center;
-  margin-left: -60px;
+}
+
+.msg-history:before {
+  content: '';
+  line-height: 0;
+  font-size: 0;
+  width: 0;
+  height: 0;
+  border-top: 16px solid lightblue;
+  border-bottom: 16px solid transparent;
+  border-left: 5px solid transparent;
+  border-right: 5px solid lightblue;
+  position: absolute;
+  left: -10px;
+}
+
+.msg-history:after {
+  content: '';
+  line-height: 0;
+  font-size: 0;
+  width: 0;
+  height: 0;
+  border-top: 16px solid lightblue;
+  border-bottom: 16px solid transparent;
+  border-left: 5px solid lightblue;
+  border-right: 5px solid transparent;
+  position: absolute;
+  left: 120px;
 }
 
 /* chat history boxes */
