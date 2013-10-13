@@ -21,8 +21,8 @@
 }
 
 .current-location-icon {
-  font-size: 30px;
-  color: blue;
+  background: radial-gradient(circle farthest-corner at 39% 22%, #81E8F6, #76DEEF 10%, #055194 80%, #062745 100%) repeat scroll 0 0 rgba(0, 0, 0, 0);
+  border-radius: 50%;
 }
 
 /* obselete animation effects
