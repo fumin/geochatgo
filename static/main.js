@@ -34,6 +34,9 @@ var markers = new L.MarkerClusterGroup({
     }).slice(0, 5);
 
     var box = document.createElement("div");
+    box.style.position = "absolute";
+    box.style.left = "23px";
+    box.style.bottom = "7px";
 
     // For UI creation of the Taipei 101
     var roof = document.createElement("div");
