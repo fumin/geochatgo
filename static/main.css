@@ -86,18 +86,16 @@
 }
 
 .msg-history {
-  position: relative;
-  width: 250px;
-  height: 55px;
-  padding: 10px;
-  text-align: center;
   background-color: #fff;
   border: 3px solid #666;
   border-radius: 15px;
   box-shadow: 2px 2px 4px #888;
-  margin-top: -3px;
+  margin-top: -8px;
   font-size: 18px;
   opacity: 0.96;
+  
+  max-width: 250px;
+  display: inline-block;
 
   white-space: nowrap;
   overflow: hidden;
@@ -108,15 +106,22 @@
   background-color: #EEEEEE;
 }
 
+.oldest-chat {
+  min-width: 80px;
+}
+
+.chat-tail {
+  position: relative;
+  margin-top: -8px;
+}
+
 .chat-tail:before {
   content: ' ';
   position: absolute;
   width: 0;
   height: 0;
   border: 15px solid;
-  top: 258px;
-  bottom: -30px;
-  left: 25px;
+  left: 125px;
   border-color: #666 transparent transparent #666;
 }
 
@@ -125,10 +130,10 @@
   position: absolute;
   width: 0;
   height: 0;
-  border: 11px solid;
+  border: 13px solid;
   border-color: #fff transparent transparent #fff;
-  left: 29px;
-  top: 257px;
+  left: 128px;
+  top: -4px;
 }
 
 /* Taipei 101

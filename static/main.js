@@ -35,8 +35,10 @@ var markers = new L.MarkerClusterGroup({
 
     var box = document.createElement("div");
     box.style.position = "absolute";
-    box.style.left = "23px";
-    box.style.bottom = "7px";
+    box.style.width = "250px";
+    box.style.left = "-125px";
+    box.style.bottom = "30px";
+    box.style["text-align"] = "center";
 
     // For UI creation of the Taipei 101
     var roof = document.createElement("div");
@@ -57,6 +59,9 @@ var markers = new L.MarkerClusterGroup({
         chat.innerHTML = linkify(ms[i].chatData.msg);
       }
       box.appendChild(chat);
+      
+      var br = document.createElement("br");
+      box.appendChild(br);
     }
 
     // For UI creation of the chat triangle.
