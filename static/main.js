@@ -31,7 +31,7 @@ var markers = new L.MarkerClusterGroup({
       } else if (b.chatData.created_at && !a.chatData.created_at) {
         return 1;
       } else { return -1; }
-    }).slice(0, 5);
+    }).slice(0, 5).reverse();
 
     var box = document.createElement("div");
     box.style.position = "absolute";
@@ -49,8 +49,8 @@ var markers = new L.MarkerClusterGroup({
       var chat = document.createElement("div");
       chat.classList.add("msg-history");
 
-      if (i == 0) { chat.classList.add("newchat"); }
-      if (i == ms.length-1) { chat.classList.add("oldest-chat"); }
+      if (i == 0) { chat.classList.add("topchat"); }
+      if (i == ms.length-1) { chat.classList.add("bottomchat"); }
 
       if (ms[i].chatData.markerId) {
         chat.id = ms[i].chatData.markerId;

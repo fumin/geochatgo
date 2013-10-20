@@ -127,8 +127,9 @@ function getChatlogs(latLng, box) {
       var data = JSON.parse(req.responseText);
       for (var i = 0; i != data.length; ++i) {
         var d = formatChatlog(data[i]);
-        listContainer.appendChild(d);
-      }
+        listContainer.insertBefore(d, listContainer.firstChild);
+      }     
+      listContainer.scrollTop = listContainer.scrollHeight;
     }
   };
   // We should be using GET here, this is just to circumvent openshift's cache.
@@ -153,7 +154,8 @@ function getChatlogs(latLng, box) {
         var listener = function(e) {
           var data = JSON.parse(e.data);
           var div = formatChatlog(data);
-          listContainer.insertBefore(div, listContainer.firstChild);
+          listContainer.appendChild(div);
+          listContainer.scrollTop = listContainer.scrollHeight;
         };
         g_source.addEventListener(popupId, listener, false);
 

@@ -26,21 +26,21 @@
 }
 
 /* obselete animation effects
-@-webkit-keyframes newchat-animation {
+@-webkit-keyframes topchat-animation {
   0% { font-size: 200%; width: 200px; color: red; }
   100% { font-size: 100%; width: 100px; color: black; }
 }
 
-@keyframes newchat-animation {
+@keyframes topchat-animation {
   0% { font-size: 200%; width: 200px;  color: red; }
   100% { font-size: 100%; width: 100px; color: black; }
 }
 
-.newchat {
-  -webkit-animation: newchat-animation 5s;
-  -moz-animation: newchat-animation 5s;
-  -o-animation: newchat-animation 5s;  
-  animation: newchat-animation 5s;
+.topchat {
+  -webkit-animation: topchat-animation 5s;
+  -moz-animation: topchat-animation 5s;
+  -o-animation: topchat-animation 5s;  
+  animation: topchat-animation 5s;
   
   width: 100%;
 }
@@ -106,7 +106,7 @@
   background-color: #EEEEEE;
 }
 
-.oldest-chat {
+.bottomchat {
   min-width: 80px;
 }
 
