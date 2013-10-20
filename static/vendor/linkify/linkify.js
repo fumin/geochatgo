@@ -7,6 +7,7 @@
  * -> to read my &lt;i&gt;status&lt;/i&gt;."
  *
  * Nandalu change logs:
+ * stop click event propagation - 2013-10-20 fumin
  * added target="_blank" to hint open a new tab for the external link - 2013-08-18 fumin
  */
 var linkify = (function () {
@@ -25,7 +26,7 @@ var linkify = (function () {
     if (m) {
       text = escapeHTML(m[1]);
       url = HAS_PROTOCOL.test(text) ? text : 'http://' + text;
-      result = result.replace(text, '<a href="' + url + '" target="_blank">' + text + '</a>');
+      result = result.replace(text, '<a href="' + url + '" target="_blank" onclick="event.stopPropagation();">' + text + '</a>');
     }
     return result;
   }
