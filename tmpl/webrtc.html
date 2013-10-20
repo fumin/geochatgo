@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebRTC</title>
+	
+	<style>
+	video {
+		/* filter: hue-rotate(180deg) saturate(200%);
+		-moz-filter: hue-rotate(180deg) saturate(200%);
+		-webkit-filter: hue-rotate(180deg) saturate(200%); */
+	}
+	</style>
+</head>
+<body>
+	<h1>Hello World</h1>
+	<video id="localvideo"></video>
+
+<script type="text/javascript">
+
+// Set |codec| as the default audio codec if it's present.
+// The format of |codec| is 'NAME/RATE', e.g. 'opus/48000'.
+function preferAudioCodec(sdp, codec) {
+  var fields = codec.split('/');
+  if (fields.length != 2) {
+    console.log('Invalid codec setting: ' + codec);
+    return sdp;
+  }
+  var name = fields[0];
+  var rate = fields[1];
+  var sdpLines = sdp.split('\r\n');
+
+  // Search for m line.
+  for (var i = 0; i < sdpLines.length; i++) {
+      if (sdpLines[i].search('m=audio') !== -1) {
+        var mLineIndex = i;
+        break;
+      }
+  }
+  if (mLineIndex === null)
+    return sdp;
+
+  // If the codec is available, set it as the default in m line.
+  for (var i = 0; i < sdpLines.length; i++) {
+    if (sdpLines[i].search(name + '/' + rate) !== -1) {
+      var regexp = new RegExp(':(\\d+) ' + name + '\\/' + rate, 'i');
+      var payload = extractSdp(sdpLines[i], regexp);
+      if (payload)
+        sdpLines[mLineIndex] = setDefaultCodec(sdpLines[mLineIndex],
+                                               payload);
+      break;
+    }
+  }
+
+  // Remove CN in m line and sdp.
+  sdpLines = removeCN(sdpLines, mLineIndex);
+
+  sdp = sdpLines.join('\r\n');
+  return sdp;
+}
+
+var mediaConstraints = {video: true};
+// var mediaConstraints = {audio: true, video: true};
+
+var gatheredIceCandidateTypes = { Local: {}, Remote: {} };
+function noteIceCandidate(location, type) {
+  if (gatheredIceCandidateTypes[location][type])
+    return;
+  gatheredIceCandidateTypes[location][type] = 1;
+  console.log("Got Ice candidate, location:" + location + ", type: " + type);
+}
+function onIceCandidate(event) {
+  if (event.candidate) {
+    sendMessage({type: 'candidate',
+    	         label: event.candidate.sdpMLineIndex,
+                 id: event.candidate.sdpMid,
+                 candidate: event.candidate.candidate});
+    noteIceCandidate("Local", iceCandidateType(event.candidate.candidate));
+  } else {
+    console.log('End of candidates.');
+  }
+}
+
+function createPeerConnection() {
+  var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
+  g_pc = new RTCPeerConnection(pc_config);
+  g_pc.onicecandidate= onIceCandidate;
+}
+
+function onSetSessionDescriptionSuccess() {
+  console.log('Set session description success.');
+}
+function onSetSessionDescriptionError(error) {
+  console.log('Failed to set session description: ' + error.toString());
+}
+function setLocalAndSendMessage(sessionDescription) {
+  sessionDescription.sdp = preferAudioCodec(sessionDescription.sdp, "opus/48000");
+  g_pc.setLocalDescription(sessionDescription,
+       onSetSessionDescriptionSuccess, onSetSessionDescriptionError);
+  sendMessage(sessionDescription);
+}
+function onCreateAnswerFail(e) {
+  console.log("Create answer failed with: " + e);
+}
+function listenForSignal() {
+  var source = new EventSource("/webrtc/signal/source")
+  source.addEventListener("offer", function(e){
+    var msg = e.data;
+    g_pc.setRemoteDescription(new RTCSessionDescription(msg));
+    g_pc.createAnswer(setLocalAndSendMessage, onCreateAnswerFail, mediaConstraints);
+  }, false);
+  source.addEventListener("answer", function(e){
+    g_pc.setRemoteDescription(new RTCSessionDescription(msg));
+  }, false);
+  source.addEventListener("candidate", function(e) {
+    var msg = e.data;
+    var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label,
+                                         candidate:msg.candidate});
+    g_pc.addIceCandidate(candidate);
+  }, false);
+  source.addEventListener("bye", function(e){
+    g_pc.close();
+  }, false);
+}
+  
+  
+
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+function successCallback(localMediaStream) {
+  window.stream = localMediaStream; // stream available to console
+  var video = document.querySelector("video");
+  video.src = window.URL.createObjectURL(localMediaStream);
+  video.play();
+}
+
+function errorCallback(error){
+  console.log("navigator.getUserMedia error: ", error);
+}
+
+navigator.getUserMedia(mediaConstraints, successCallback, errorCallback);
+
+createPeerConnection();
+listenForSignal();
+
+window.onbeforeunload = function(e){
+  sendMessage('bye');
+}
+
+</script>
+
+</body>
+</html>
