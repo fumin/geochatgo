@@ -118,9 +118,16 @@ func (w *byteWriter) Write(b []byte) {
 
 const SSEHeatbeat = "heartbeat"
 
+// HTTP handlers using Sse should ALWAYS listen to the ConnClosed channel before
+// returning. In other words, if the handle wants to return early,
+// it should send a message to the stopTicker channel and wait for the ConnClosed
+// channel to return.
+// This is because Sse.Write calls Flush, and the http package *panics*
+// if http.Flusher.Flush is called after http handlers return.
 type Sse struct {
 	w          http.ResponseWriter
 	ticker     *time.Ticker
+	StopTicker chan bool
 	ConnClosed chan bool
 }
 
@@ -131,12 +138,18 @@ func NewServerSideEventWriter(w http.ResponseWriter) Sse {
 	headers.Set("Connection", "keep-alive")
 
 	// Openshift proxy's keep-alive has a timeout of 15, we need to be shorter.
-	sse := Sse{w, time.NewTicker(10 * time.Second), make(chan bool, 1)}
+	ticker := time.NewTicker(10 * time.Second)
+	sse := Sse{w, ticker, make(chan bool), make(chan bool, 1)}
 	go func() {
-		for _ = range sse.ticker.C {
-			err := sse.EventWrite(SSEHeatbeat, make([]byte, 0))
-			if err != nil {
-				sse.ConnClosed <- true
+		defer func() { sse.ConnClosed <- true }()
+		for {
+			select {
+			case <-sse.ticker.C:
+				err := sse.EventWrite(SSEHeatbeat, make([]byte, 0))
+				if err != nil {
+					return
+				}
+			case <-sse.StopTicker:
 				return
 			}
 		}
