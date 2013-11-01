@@ -3,6 +3,8 @@
 <head>
 	<title>WebRTC</title>
 	
+	<script src="static/lib/util.js"></script>
+	
 	<style>
 	video {
 		/* filter: hue-rotate(180deg) saturate(200%);
@@ -14,9 +16,24 @@
 <body>
 	<h1>Hello World</h1>
 	<video id="localvideo"></video>
+	<video id="remotevideo"></video>
 
 <script type="text/javascript">
 
+var goData = {{.Js}};
+console.log(goData);
+
+function sendMessage(message) {
+  var msgString = JSON.stringify(message);
+  console.log('C->S: ' + msgString);
+  // NOTE: AppRTCClient.java searches & parses this line; update there when
+  // changing here.
+  path = '/webrtc/signal/transmitter';
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', path, true);
+  xhr.send(msgString);
+}
+/*
 // Set |codec| as the default audio codec if it's present.
 // The format of |codec| is 'NAME/RATE', e.g. 'opus/48000'.
 function preferAudioCodec(sdp, codec) {
@@ -62,6 +79,15 @@ var mediaConstraints = {video: true};
 // var mediaConstraints = {audio: true, video: true};
 
 var gatheredIceCandidateTypes = { Local: {}, Remote: {} };
+function iceCandidateType(candidateSDP) {
+  if (candidateSDP.indexOf("typ relay ") >= 0)
+    return "TURN";
+  if (candidateSDP.indexOf("typ srflx ") >= 0)
+    return "STUN";
+  if (candidateSDP.indexOf("typ host ") >= 0)
+    return "HOST";
+  return "UNKNOWN";
+}
 function noteIceCandidate(location, type) {
   if (gatheredIceCandidateTypes[location][type])
     return;
@@ -79,11 +105,18 @@ function onIceCandidate(event) {
     console.log('End of candidates.');
   }
 }
-
+function onRemoteStreamAdded(event) {
+  var video = document.querySelector("#remotevideo");
+  video.src = URL.createObjectURL(event.stream);
+}
 function createPeerConnection() {
   var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
   g_pc = new RTCPeerConnection(pc_config);
-  g_pc.onicecandidate= onIceCandidate;
+  g_pc.onicecandidate = onIceCandidate;
+  g_pc.onaddstream = onRemoteStreamAdded;
+  g_pc.onremovestream = onRemoteStreamRemoved;
+  g_pc.onsignalingstatechange = onSignalingStateChanged;
+  g_pc.oniceconnectionstatechange = onIceConnectionStateChanged;
 }
 
 function onSetSessionDescriptionSuccess() {
@@ -101,49 +134,59 @@ function setLocalAndSendMessage(sessionDescription) {
 function onCreateAnswerFail(e) {
   console.log("Create answer failed with: " + e);
 }
+
+*/
 function listenForSignal() {
-  var source = new EventSource("/webrtc/signal/source")
-  source.addEventListener("offer", function(e){
-    var msg = e.data;
-    g_pc.setRemoteDescription(new RTCSessionDescription(msg));
-    g_pc.createAnswer(setLocalAndSendMessage, onCreateAnswerFail, mediaConstraints);
-  }, false);
-  source.addEventListener("answer", function(e){
-    g_pc.setRemoteDescription(new RTCSessionDescription(msg));
-  }, false);
-  source.addEventListener("candidate", function(e) {
-    var msg = e.data;
-    var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label,
-                                         candidate:msg.candidate});
-    g_pc.addIceCandidate(candidate);
-  }, false);
-  source.addEventListener("bye", function(e){
-    g_pc.close();
+  g_source = new EventSource("/webrtc/signal/source")
+  g_source.addEventListener("message", function(e){
+    var msg = JSON.parse(e.data);
+    if (msg.type == "offer") {
+      g_pc.setRemoteDescription(new RTCSessionDescription(msg));
+      g_pc.createAnswer(setLocalAndSendMessage, onCreateAnswerFail, mediaConstraints);
+    } else if (msg.type == "answer") {
+      g_pc.setRemoteDescription(new RTCSessionDescription(msg));
+    } else if (msg.type == "candidate") {
+      var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label,
+                                           candidate:msg.candidate});
+      g_pc.addIceCandidate(candidate);
+    } else if (msg.type == "bye") {
+      // g_pc.close();
+    } else if (msg.type == "username") {
+      g_username = msg.username;
+    } else {
+      console.log("Unknown message: " + JSON.stringify(msg));
+    }
   }, false);
 }
-  
-  
+listenForSignal();
+/*
 
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-
-function successCallback(localMediaStream) {
+function getUserMediaSuccess(localMediaStream) {
   window.stream = localMediaStream; // stream available to console
-  var video = document.querySelector("video");
+  var video = document.querySelector("#localvideo");
   video.src = window.URL.createObjectURL(localMediaStream);
   video.play();
 }
-
-function errorCallback(error){
+function getUserMediaError(error){
   console.log("navigator.getUserMedia error: ", error);
 }
-
-navigator.getUserMedia(mediaConstraints, successCallback, errorCallback);
+navigator.getUserMedia(mediaConstraints, getUserMediaSuccess, getUserMediaError);
 
 createPeerConnection();
 listenForSignal();
+*/
 
+function lll(data) {
+  console.log(data);
+}
 window.onbeforeunload = function(e){
-  sendMessage('bye');
+  postHTTP("/webrtc/signal/leave_source",
+           {username: g_username},
+           lll,
+           false // synchronous HTTP request
+           )
+  sendMessage({type: "bye"});
 }
 
 </script>

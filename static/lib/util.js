@@ -26,13 +26,13 @@ uriSerialize = function(obj) {
   return str.join("&");
 }
 
-postHTTP = function(path, params, onreadystatechange) {
+postHTTP = function(path, params, onreadystatechange, async) {
   var paramStr = uriSerialize(params);
   var req = new XMLHttpRequest();
   if (onreadystatechange != undefined) {
     req.onreadystatechange = function(){onreadystatechange(req);};
   }
-  req.open("POST", path);
+  req.open("POST", path, !!async);
   req.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
   req.send(paramStr);
 }

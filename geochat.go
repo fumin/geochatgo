@@ -18,6 +18,9 @@ func init() {
 
 	// Experimental
 	http.HandleFunc("/webrtc", webrtc)
+	http.HandleFunc("/webrtc/signal/transmitter", webrtcTransmitter)
+	http.HandleFunc("/webrtc/signal/source", webrtcSource)
+	http.HandleFunc("/webrtc/signal/leave_source", webrtcLeaveSource)
 
 	// Production
 	http.HandleFunc("/open_popup", openPopup)
