@@ -16,178 +16,181 @@
 <body>
 	<h1>Hello World</h1>
 	<video id="localvideo"></video>
-	<video id="remotevideo"></video>
 
 <script type="text/javascript">
 
-var goData = {{.Js}};
-console.log(goData);
+if (navigator.mozGetUserMedia) {
+  navigator.getUserMedia = navigator.mozGetUserMedia;
+  RTCPeerConnection = mozRTCPeerConnection;
+} else {
+  navigator.getUserMedia = navigator.webkitGetUserMedia;
+  RTCPeerConnection = webkitRTCPeerConnection;
+}
 
-function sendMessage(message) {
-  var msgString = JSON.stringify(message);
-  console.log('C->S: ' + msgString);
-  // NOTE: AppRTCClient.java searches & parses this line; update there when
-  // changing here.
-  path = '/webrtc/signal/transmitter';
+var controllerData = {{.}};
+var members = controllerData["Members"];
+console.log("members in room", members);
+
+mediaConstraints = {video: true};
+
+function sendSignal(destinations, message) {
+  var body = JSON.stringify(message);
+  var data = {"destinations": destinations, "body": body}
+  console.log('C->S: ', data);
+
   var xhr = new XMLHttpRequest();
-  xhr.open('POST', path, true);
-  xhr.send(msgString);
-}
-/*
-// Set |codec| as the default audio codec if it's present.
-// The format of |codec| is 'NAME/RATE', e.g. 'opus/48000'.
-function preferAudioCodec(sdp, codec) {
-  var fields = codec.split('/');
-  if (fields.length != 2) {
-    console.log('Invalid codec setting: ' + codec);
-    return sdp;
-  }
-  var name = fields[0];
-  var rate = fields[1];
-  var sdpLines = sdp.split('\r\n');
-
-  // Search for m line.
-  for (var i = 0; i < sdpLines.length; i++) {
-      if (sdpLines[i].search('m=audio') !== -1) {
-        var mLineIndex = i;
-        break;
-      }
-  }
-  if (mLineIndex === null)
-    return sdp;
-
-  // If the codec is available, set it as the default in m line.
-  for (var i = 0; i < sdpLines.length; i++) {
-    if (sdpLines[i].search(name + '/' + rate) !== -1) {
-      var regexp = new RegExp(':(\\d+) ' + name + '\\/' + rate, 'i');
-      var payload = extractSdp(sdpLines[i], regexp);
-      if (payload)
-        sdpLines[mLineIndex] = setDefaultCodec(sdpLines[mLineIndex],
-                                               payload);
-      break;
-    }
-  }
-
-  // Remove CN in m line and sdp.
-  sdpLines = removeCN(sdpLines, mLineIndex);
-
-  sdp = sdpLines.join('\r\n');
-  return sdp;
+  xhr.open('POST', '/webrtc/signal/transmitter', true);
+  xhr.send(JSON.stringify(data));
 }
 
-var mediaConstraints = {video: true};
-// var mediaConstraints = {audio: true, video: true};
-
-var gatheredIceCandidateTypes = { Local: {}, Remote: {} };
-function iceCandidateType(candidateSDP) {
-  if (candidateSDP.indexOf("typ relay ") >= 0)
-    return "TURN";
-  if (candidateSDP.indexOf("typ srflx ") >= 0)
-    return "STUN";
-  if (candidateSDP.indexOf("typ host ") >= 0)
-    return "HOST";
-  return "UNKNOWN";
-}
-function noteIceCandidate(location, type) {
-  if (gatheredIceCandidateTypes[location][type])
-    return;
-  gatheredIceCandidateTypes[location][type] = 1;
-  console.log("Got Ice candidate, location:" + location + ", type: " + type);
-}
-function onIceCandidate(event) {
-  if (event.candidate) {
-    sendMessage({type: 'candidate',
-    	         label: event.candidate.sdpMLineIndex,
-                 id: event.candidate.sdpMid,
-                 candidate: event.candidate.candidate});
-    noteIceCandidate("Local", iceCandidateType(event.candidate.candidate));
-  } else {
-    console.log('End of candidates.');
-  }
-}
-function onRemoteStreamAdded(event) {
-  var video = document.querySelector("#remotevideo");
-  video.src = URL.createObjectURL(event.stream);
-}
-function createPeerConnection() {
+var g_RTCPeerConnections = {};
+function preparePeerConnection(myToken, token, onaddstream) {
   var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
-  g_pc = new RTCPeerConnection(pc_config);
-  g_pc.onicecandidate = onIceCandidate;
-  g_pc.onaddstream = onRemoteStreamAdded;
-  g_pc.onremovestream = onRemoteStreamRemoved;
-  g_pc.onsignalingstatechange = onSignalingStateChanged;
-  g_pc.oniceconnectionstatechange = onIceConnectionStateChanged;
+  var onicecandidate = function(evt) {
+    if (!evt.candidate){
+      return;
+    } // End of candidates reported by browser.
+    var msg = {"from": myToken,
+               "type": "icecandidate",
+               "candidate": evt.candidate.candidate,
+               "sdpMLineIndex": evt.candidate.sdpMLineIndex,
+               "sdpMid": evt.candidate.sdpMid};
+    sendSignal([token], msg);
+  };
+  
+  pc = new RTCPeerConnection(pc_config);
+  pc.onicecandidate = onicecandidate;
+  pc.onaddstream = onaddstream;
+  g_RTCPeerConnections[token] = pc;
+  return pc;
 }
 
-function onSetSessionDescriptionSuccess() {
-  console.log('Set session description success.');
-}
-function onSetSessionDescriptionError(error) {
-  console.log('Failed to set session description: ' + error.toString());
-}
-function setLocalAndSendMessage(sessionDescription) {
-  sessionDescription.sdp = preferAudioCodec(sessionDescription.sdp, "opus/48000");
-  g_pc.setLocalDescription(sessionDescription,
-       onSetSessionDescriptionSuccess, onSetSessionDescriptionError);
-  sendMessage(sessionDescription);
-}
-function onCreateAnswerFail(e) {
-  console.log("Create answer failed with: " + e);
-}
-
-*/
-function listenForSignal() {
-  g_source = new EventSource("/webrtc/signal/source")
-  g_source.addEventListener("message", function(e){
-    var msg = JSON.parse(e.data);
-    if (msg.type == "offer") {
-      g_pc.setRemoteDescription(new RTCSessionDescription(msg));
-      g_pc.createAnswer(setLocalAndSendMessage, onCreateAnswerFail, mediaConstraints);
-    } else if (msg.type == "answer") {
-      g_pc.setRemoteDescription(new RTCSessionDescription(msg));
-    } else if (msg.type == "candidate") {
-      var candidate = new RTCIceCandidate({sdpMLineIndex:msg.label,
-                                           candidate:msg.candidate});
-      g_pc.addIceCandidate(candidate);
-    } else if (msg.type == "bye") {
-      // g_pc.close();
-    } else if (msg.type == "username") {
-      g_username = msg.username;
-    } else {
-      console.log("Unknown message: " + JSON.stringify(msg));
+// evt is expected to be an EventSource event
+function rtcSignalHandler(localMediaStream, myToken, evt) {
+  var msg = JSON.parse(evt.data);
+  console.log(msg);
+  var pc = g_RTCPeerConnections[msg.from];
+    
+  if (msg.type == "offer") {
+    if (!pc) {
+      pc = preparePeerConnection(myToken, msg.from, onAddRemoteStream);
+      pc.addStream(localMediaStream);
     }
-  }, false);
+    pc.setRemoteDescription(new RTCSessionDescription(msg.sessionDescription));
+    var answerSuccessCallback = function(sessionDescription) {
+      pc.setLocalDescription(sessionDescription,
+                             function(evt){},
+                             function(err){ console.log(err); });
+      var answerMsg = {"from": myToken,
+                       "type": "answer",
+                       "sessionDescription": sessionDescription};
+      sendSignal([msg.from], answerMsg);
+    };
+    pc.createAnswer(answerSuccessCallback,
+                    function(err){ console.log(err); });
+                      
+  } else if (msg.type == "answer") {
+    if (!pc) { return; }
+    pc.setRemoteDescription(new RTCSessionDescription(msg.sessionDescription));
+      
+  } else if (msg.type == "icecandidate") {
+    if (!pc) { return; }
+    var candidate = new RTCIceCandidate({"candidate": msg.candidate,
+                                         "sdpMLineIndex": msg.sdpMLineIndex});
+    pc.addIceCandidate(candidate);
+      
+  } else {
+    console.log("Unknown message: ", msg);
+  }
 }
-listenForSignal();
-/*
 
-navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-function getUserMediaSuccess(localMediaStream) {
-  window.stream = localMediaStream; // stream available to console
-  var video = document.querySelector("#localvideo");
-  video.src = window.URL.createObjectURL(localMediaStream);
-  video.play();
+// pc is a RTCPeerConnection 
+function createSignalChannel(callback) {
+  var source = new EventSource("/webrtc/signal/source");
+  var myTokenListener = function(evt) {
+    var msg = JSON.parse(evt.data);
+    console.log(msg);
+    var pc = g_RTCPeerConnections[msg.from];
+    
+    if (msg.type == "token") {
+      var myToken = msg.token;
+      callback(source, myToken);
+      source.removeEventListener("message", myTokenListener, false);
+      console.log("my token: ", myToken);
+      
+    } else {
+      console.log("Unknown message: ", msg);
+    }
+  }
+  source.addEventListener("message", myTokenListener, false);
+  return source;
 }
-function getUserMediaError(error){
-  console.log("navigator.getUserMedia error: ", error);
-}
-navigator.getUserMedia(mediaConstraints, getUserMediaSuccess, getUserMediaError);
 
-createPeerConnection();
-listenForSignal();
-*/
+// pc is a RTCPeerConnection
+function getLocalMedia(callback) {
+  function getUserMediaSuccess(localMediaStream) {
+    window.localMediaStream = localMediaStream;
+    var video = document.querySelector("#localvideo");
+    video.src = window.URL.createObjectURL(localMediaStream);
+    video.play();
+    
+    callback(localMediaStream);
+  }
+  function getUserMediaError(error){
+    console.log("navigator.getUserMedia error: ", error);
+  }
+  navigator.getUserMedia(mediaConstraints, getUserMediaSuccess, getUserMediaError);
+}
 
-function lll(data) {
-  console.log(data);
-}
-window.onbeforeunload = function(e){
-  postHTTP("/webrtc/signal/leave_source",
-           {username: g_username},
-           lll,
-           false // synchronous HTTP request
-           )
-  sendMessage({type: "bye"});
-}
+function onAddRemoteStream(evt){
+  var remotevideo = document.createElement("video");
+  remotevideo.src = URL.createObjectURL(evt.stream);
+  remotevideo.style.width = "50%";
+  
+  localvideo = document.querySelector("#localvideo");
+  localvideo.parentNode.insertBefore(remotevideo, localvideo);
+  
+  g_remoteStream = evt.stream;
+  g_remoteVideo = remotevideo;
+};
+
+createSignalChannel(function(source, myToken) {
+  for (var i = 0; i != members.length; i++) {
+    var token = members[i];
+    preparePeerConnection(myToken, token, onAddRemoteStream);
+  }
+  
+  getLocalMedia(function(localMediaStream){
+    source.addEventListener("message", function(evt){
+      rtcSignalHandler(localMediaStream, myToken, evt);
+    });
+  
+    for (var i = 0; i != members.length; i++) {
+      var token = members[i];
+      var pc = g_RTCPeerConnections[token];
+      
+      pc.addStream(localMediaStream);
+      var offerSuccessCallback = function(sessionDescription) {
+        pc.setLocalDescription(sessionDescription,
+                               function(evt){},
+                               function(err){ console.log(err); });
+        var msg = {"from": myToken,
+                   "type": "offer",
+                   "sessionDescription": sessionDescription};
+        sendSignal([token], msg);
+      };
+      pc.createOffer(offerSuccessCallback, function(err){ console.log(err); });
+    }
+  });
+  
+  window.onbeforeunload = function(e){
+    postHTTP("/webrtc/signal/leave_source",
+             {"token": myToken},
+             function(data){ console.log(data); },
+             false // synchronous HTTP request
+             );
+  };
+});
 
 </script>
 
