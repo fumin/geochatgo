@@ -15,6 +15,14 @@ import (
 
 func init() {
 	initConfig()
+
+	// Experimental
+	http.HandleFunc("/webrtc", webrtc)
+	http.HandleFunc("/webrtc/signal/transmitter", webrtcTransmitter)
+	http.HandleFunc("/webrtc/signal/source", webrtcSource)
+	http.HandleFunc("/webrtc/signal/leave_source", webrtcLeaveSource)
+
+	// Production
 	http.HandleFunc("/open_popup", openPopup)
 	http.HandleFunc("/close_popup", closePopup)
 	http.HandleFunc("/update_mapbounds", updateMapbounds)
