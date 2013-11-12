@@ -135,13 +135,18 @@ function createSignalChannel(callback) {
   return source;
 }
 
+// For some reason, in Android, the setTimeout is needed...
+function playVideo(video) {
+  setTimeout(function(){ video.play() }, 50);
+}
+
 // pc is a RTCPeerConnection
 function getLocalMedia(callback) {
   function getUserMediaSuccess(localMediaStream) {
     window.localMediaStream = localMediaStream;
     var video = document.querySelector("#localvideo");
     video.src = window.URL.createObjectURL(localMediaStream);
-    video.play();
+    playVideo(video);
     
     callback(localMediaStream);
   }
@@ -160,7 +165,7 @@ function onAddRemoteStream(token, evt){
   var remotevideo = document.createElement("video");
   remotevideo.id = genVideoId(token);
   remotevideo.src = URL.createObjectURL(evt.stream);
-  remotevideo.play();
+  playVideo(remotevideo);
   
   remotevideo.style.width = "50%";
   remotevideo.classList.add("remote-video")
