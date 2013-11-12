@@ -146,6 +146,7 @@ function onAddRemoteStream(evt){
   var remotevideo = document.createElement("video");
   remotevideo.src = URL.createObjectURL(evt.stream);
   remotevideo.style.width = "50%";
+  remotevideo.play();
   
   localvideo = document.querySelector("#localvideo");
   localvideo.parentNode.insertBefore(remotevideo, localvideo);
