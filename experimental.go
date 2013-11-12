@@ -83,6 +83,13 @@ func webrtcSource(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		g_webrtcMap.Lock()
 		delete(g_webrtcMap.m, token)
+		byeMsg := `{"type": "bye", "from":"` + token + `"}`
+		for _, c := range g_webrtcMap.m {
+			select {
+			case c <- recvMsg_t{"", []byte(byeMsg)}:
+			default:
+			}
+		}
 		g_webrtcMap.Unlock()
 	}()
 

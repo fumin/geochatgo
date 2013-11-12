@@ -11,6 +11,12 @@
 		-moz-filter: hue-rotate(180deg) saturate(200%);
 		-webkit-filter: hue-rotate(180deg) saturate(200%); */
 	}
+	
+	.remote-video {
+	  transform: rotateY(180deg);
+      -webkit-transform:rotateY(180deg);
+      -moz-transform:rotateY(180deg);
+    }
 	</style>
 </head>
 <body>
@@ -58,9 +64,9 @@ function preparePeerConnection(myToken, token, onaddstream) {
     sendSignal([token], msg);
   };
   
-  pc = new RTCPeerConnection(pc_config);
+  var pc = new RTCPeerConnection(pc_config);
   pc.onicecandidate = onicecandidate;
-  pc.onaddstream = onaddstream;
+  pc.onaddstream = function(evt){ onaddstream(token, evt); };
   g_RTCPeerConnections[token] = pc;
   return pc;
 }
@@ -99,6 +105,10 @@ function rtcSignalHandler(localMediaStream, myToken, evt) {
                                          "sdpMLineIndex": msg.sdpMLineIndex});
     pc.addIceCandidate(candidate);
       
+  } else if (msg.type == "bye") {
+    // Rely on signal channel for disconnections
+    // https://code.google.com/p/webrtc/issues/detail?id=1676
+    onRemoteHangup(msg.from);
   } else {
     console.log("Unknown message: ", msg);
   }
@@ -110,7 +120,6 @@ function createSignalChannel(callback) {
   var myTokenListener = function(evt) {
     var msg = JSON.parse(evt.data);
     console.log(msg);
-    var pc = g_RTCPeerConnections[msg.from];
     
     if (msg.type == "token") {
       var myToken = msg.token;
@@ -142,18 +151,35 @@ function getLocalMedia(callback) {
   navigator.getUserMedia(mediaConstraints, getUserMediaSuccess, getUserMediaError);
 }
 
-function onAddRemoteStream(evt){
+function genVideoId(token) {
+  return "video-" + token;
+}
+
+// evt is expected to be a RTCPeerConnection.onaddstream event
+function onAddRemoteStream(token, evt){
   var remotevideo = document.createElement("video");
+  remotevideo.id = genVideoId(token);
   remotevideo.src = URL.createObjectURL(evt.stream);
-  remotevideo.style.width = "50%";
   remotevideo.play();
+  
+  remotevideo.style.width = "50%";
+  remotevideo.classList.add("remote-video")
   
   localvideo = document.querySelector("#localvideo");
   localvideo.parentNode.insertBefore(remotevideo, localvideo);
-  
-  g_remoteStream = evt.stream;
-  g_remoteVideo = remotevideo;
 };
+
+function onRemoteHangup(token) {
+  var remotevideo = document.querySelector("#" + genVideoId(token));
+  if (remotevideo) {
+    remotevideo.parentNode.removeChild(remotevideo);
+  }
+  
+  if (g_RTCPeerConnections[token]) {
+    g_RTCPeerConnections[token].close();
+    delete g_RTCPeerConnections[token];
+  }
+}
 
 createSignalChannel(function(source, myToken) {
   for (var i = 0; i != members.length; i++) {
@@ -166,21 +192,25 @@ createSignalChannel(function(source, myToken) {
       rtcSignalHandler(localMediaStream, myToken, evt);
     });
   
-    for (var i = 0; i != members.length; i++) {
-      var token = members[i];
-      var pc = g_RTCPeerConnections[token];
+    for (var i = 0; i != members.length; i++) {     
+      (function(i_){       
+        var token = members[i_];
+        var pc = g_RTCPeerConnections[token];
       
-      pc.addStream(localMediaStream);
-      var offerSuccessCallback = function(sessionDescription) {
-        pc.setLocalDescription(sessionDescription,
-                               function(evt){},
-                               function(err){ console.log(err); });
-        var msg = {"from": myToken,
-                   "type": "offer",
-                   "sessionDescription": sessionDescription};
-        sendSignal([token], msg);
-      };
-      pc.createOffer(offerSuccessCallback, function(err){ console.log(err); });
+        pc.addStream(localMediaStream);
+        var offerSuccessCallback = function(sessionDescription) {
+          pc.setLocalDescription(sessionDescription,
+                                 function(evt){},
+                                 function(err){ console.log(err); });
+          var msg = {"from": myToken,
+                     "type": "offer",
+                     "sessionDescription": sessionDescription};
+          sendSignal([token], msg);
+        };
+        pc.createOffer(offerSuccessCallback, function(err){
+          console.log(err);
+          });        
+      })(i);
     }
   });
   
