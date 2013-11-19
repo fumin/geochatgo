@@ -175,5 +175,6 @@ function postVideoChat() {
   postHTTP($("#say_form").attr("action"), data, function(req){
     if (req.readyState != 4) { return; }
     if (req.status != 200) { console.log("HTTP POST error:", req); }
+    window.open(data.msg, "_blank");
   });
 }
