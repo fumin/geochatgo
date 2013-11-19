@@ -14,7 +14,6 @@ $("#say_form").submit(function(){
       (typeof g_longitude == "undefined")) { return false; }
   // We allow users to continuously send message for now.
   // if ($("#say-btn").prop("disabled")) { return false; }
-  var precision = 5;
   var msg = $("#msg").val();
   if ($("#screen_name").val()) {
     localStorage["screen_name"] = $("#screen_name").val();
@@ -25,21 +24,14 @@ $("#say_form").submit(function(){
     msg:       msg,
     latitude:  g_latitude,
     longitude: g_longitude,
-    precision: precision
+    skipSelf: true,
   };
   $("#say-btn").button("loading");
-  jQuery.ajax({
-    type: "POST",
-    url: $("#say_form").attr("action"),
-    data: data,
-    success: function(data){
-      console.log(data);
-      $("#say-btn").button("reset");
-    },
-    error: function(jqXHR, textStatus, errorThrown){
-      console.log(errorThrown);
-      $("#say-btn").button("reset");
-    }});
+  postHTTP($("#say_form").attr("action"), data, function(req){
+    if (req.readyState != 4) { return; }
+    if (req.status != 200) { console.log("HTTP POST error:", req); }
+    $("#say-btn").button("reset");
+  });
   $("#msg").val("");
 
   // Animations

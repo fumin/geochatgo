@@ -18,6 +18,7 @@ func init() {
 
 	// Experimental
 	http.HandleFunc("/webrtc", webrtc)
+	http.HandleFunc("/webrtc/join", webrtcJoin)
 	http.HandleFunc("/webrtc/signal/transmitter", webrtcTransmitter)
 	http.HandleFunc("/webrtc/signal/source", webrtcSource)
 	http.HandleFunc("/webrtc/signal/leave_source", webrtcLeaveSource)
@@ -128,6 +129,7 @@ func say(w http.ResponseWriter, r *http.Request) {
 	parser := paramParser{R: r, W: w}
 	msg := parser.RequiredStringParam("msg")
 	lat, lng := parser.requiredLatLngParams("latitude", "longitude")
+	skipSelf := r.FormValue("skipSelf")
 	if parser.Err != nil {
 		return
 	}
@@ -150,7 +152,7 @@ func say(w http.ResponseWriter, r *http.Request) {
 	neighbors := rTree.nearestNeighbors(100, [2]float64{lat, lng})
 	b, _ := json.Marshal(data)
 	for _, neighbor := range neighbors {
-		if neighbor.receiver.key == r.FormValue("username") {
+		if skipSelf == "true" && neighbor.receiver.key == r.FormValue("username") {
 			continue
 		}
 		select {

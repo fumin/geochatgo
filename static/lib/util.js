@@ -36,3 +36,12 @@ postHTTP = function(path, params, onreadystatechange, async) {
   req.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
   req.send(paramStr);
 }
+
+function randomString(length) {
+  var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var result = '';
+  for (var i = length; i > 0; --i) {
+    result += chars[Math.round(Math.random() * (chars.length - 1))];
+  }
+  return result;
+}

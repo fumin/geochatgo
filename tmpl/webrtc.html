@@ -34,8 +34,8 @@ if (navigator.mozGetUserMedia) {
 }
 
 var controllerData = {{.}};
-var members = controllerData["Members"];
-console.log("members in room", members);
+console.log("controllerData", controllerData);
+var room = controllerData["Room"];
 
 mediaConstraints = {video: true};
 
@@ -186,38 +186,53 @@ function onRemoteHangup(token) {
   }
 }
 
+function joinRoom(myToken, room, callback) {
+  postHTTP("webrtc/join", {"token": myToken, "room": room}, function(req){
+  	if (req.readyState != 4) { return; }
+  	if (req.status != 200){ console.log("Join room failed", req); return; }
+  	
+  	var data = JSON.parse(req.responseText);
+  	var members = [];
+  	for (var member in data["members"]) {
+  	  if (member == myToken){ continue; }
+  	  members.push(member);
+  	}
+  	callback(members);
+  });
+}
+
+getLocalMedia(function(localMediaStream){
 createSignalChannel(function(source, myToken) {
+joinRoom(myToken, room, function(members){
   for (var i = 0; i != members.length; i++) {
     var token = members[i];
     preparePeerConnection(myToken, token, onAddRemoteStream);
   }
-  
-  getLocalMedia(function(localMediaStream){
-    source.addEventListener("message", function(evt){
-      rtcSignalHandler(localMediaStream, myToken, evt);
-    });
-  
-    for (var i = 0; i != members.length; i++) {     
-      (function(i_){       
-        var token = members[i_];
-        var pc = g_RTCPeerConnections[token];
-      
-        pc.addStream(localMediaStream);
-        var offerSuccessCallback = function(sessionDescription) {
-          pc.setLocalDescription(sessionDescription,
-                                 function(evt){},
-                                 function(err){ console.log(err); });
-          var msg = {"from": myToken,
-                     "type": "offer",
-                     "sessionDescription": sessionDescription};
-          sendSignal([token], msg);
-        };
-        pc.createOffer(offerSuccessCallback, function(err){
-          console.log(err);
-          });        
-      })(i);
-    }
+
+  source.addEventListener("message", function(evt){
+    rtcSignalHandler(localMediaStream, myToken, evt);
   });
+  
+  for (var i = 0; i != members.length; i++) {     
+    (function(i_){       
+      var token = members[i_];
+      var pc = g_RTCPeerConnections[token];
+      
+      pc.addStream(localMediaStream);
+      var offerSuccessCallback = function(sessionDescription) {
+        pc.setLocalDescription(sessionDescription,
+                               function(evt){},
+                               function(err){ console.log(err); });
+        var msg = {"from": myToken,
+                   "type": "offer",
+                   "sessionDescription": sessionDescription};
+        sendSignal([token], msg);
+      };
+      pc.createOffer(offerSuccessCallback, function(err){
+        console.log(err);
+        });        
+    })(i);
+  }
   
   window.onbeforeunload = function(e){
     postHTTP("/webrtc/signal/leave_source",
@@ -226,7 +241,10 @@ createSignalChannel(function(source, myToken) {
              false // synchronous HTTP request
              );
   };
-});
+    
+}); // joinRoom
+}); // createSignalChannel
+}); // getLocalMedia
 
 </script>
 

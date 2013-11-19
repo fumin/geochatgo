@@ -11,7 +11,7 @@
   <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-wip/js/bootstrap.min.js"></script>
 
   {{if true}}
-  <script src="static/vendor/leaflet/leaflet-0.6.4/leaflet-src.js"></script>
+  <script src="static/vendor/leaflet/leaflet-0.7/leaflet-src.js"></script>
   <script src="static/vendor/leaflet/leaflet.markercluster/leaflet.markercluster.js"></script>
   <script src="static/vendor/linkify/linkify.js"></script>
   <script src="static/vendor/draggabilly/draggabilly.js"></script>
@@ -26,7 +26,7 @@
   <script src="static/say_form_submit.js"></script>
   <script src="static/chatlog_popup.js"></script>
 
-  <link rel="stylesheet" href="static/vendor/leaflet/leaflet-0.6.4/leaflet.css">
+  <link rel="stylesheet" href="static/vendor/leaflet/leaflet-0.7/leaflet.css">
   <link rel="stylesheet" href="static/vendor/leaflet/leaflet.markercluster/leaflet.markercluster.css">
   <link rel="stylesheet" href="static/vendor/leaflet/leaflet.markercluster/leaflet.markercluster.default.css">
   <link rel="stylesheet" href="static/main.css">
@@ -64,7 +64,9 @@
       <button type="submit" name="button" id="say-btn" class="btn"
               data-loading-text="Loading...">GO</button>
     </form>
+    <a id="videochat" href="#" onclick="postVideoChat(); return false;">video chat</a>
   </div>
+  
   <div id="historical-arena"></div>
   <div id="location-instructions" style="display: none;">
     <h4 class="title"></h4>

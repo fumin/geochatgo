@@ -163,3 +163,17 @@ g_map.on('moveend', debounce(function(e) {
 }, 5000));
 
 }); // $(document).ready
+
+function postVideoChat() {
+  var room = randomString(10);
+  var data      = {
+    username:  g_username,
+    msg:       "https://geochat-awaw.rhcloud.com/webrtc?room=" + room,
+    latitude:  g_latitude,
+    longitude: g_longitude,
+  };
+  postHTTP($("#say_form").attr("action"), data, function(req){
+    if (req.readyState != 4) { return; }
+    if (req.status != 200) { console.log("HTTP POST error:", req); }
+  });
+}
