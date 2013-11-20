@@ -28,6 +28,8 @@
 if (navigator.mozGetUserMedia) {
   navigator.getUserMedia = navigator.mozGetUserMedia;
   RTCPeerConnection = mozRTCPeerConnection;
+  RTCSessionDescription = mozRTCSessionDescription;
+  RTCIceCandidate = mozRTCIceCandidate;
 } else {
   navigator.getUserMedia = navigator.webkitGetUserMedia;
   RTCPeerConnection = webkitRTCPeerConnection;
@@ -64,7 +66,9 @@ function preparePeerConnection(myToken, token, onaddstream) {
     sendSignal([token], msg);
   };
   
-  var pc = new RTCPeerConnection(pc_config);
+  // The DtlsSrtp constraint is needed only for Firefox
+  var constraints = {"optional": [{"DtlsSrtpKeyAgreement": true}]}; 
+  var pc = new RTCPeerConnection(pc_config, constraints);
   pc.onicecandidate = onicecandidate;
   pc.onaddstream = function(evt){ onaddstream(token, evt); };
   g_RTCPeerConnections[token] = pc;
@@ -80,7 +84,7 @@ function rtcSignalHandler(localMediaStream, myToken, evt) {
   if (msg.type == "offer") {
     if (!pc) {
       pc = preparePeerConnection(myToken, msg.from, onAddRemoteStream);
-      pc.addStream(localMediaStream);
+      if (localMediaStream) { pc.addStream(localMediaStream); }
     }
     pc.setRemoteDescription(new RTCSessionDescription(msg.sessionDescription));
     var answerSuccessCallback = function(sessionDescription) {
@@ -152,6 +156,7 @@ function getLocalMedia(callback) {
   }
   function getUserMediaError(error){
     console.log("navigator.getUserMedia error: ", error);
+    callback(null);
   }
   navigator.getUserMedia(mediaConstraints, getUserMediaSuccess, getUserMediaError);
 }
@@ -218,7 +223,7 @@ joinRoom(myToken, room, function(members){
       var token = members[i_];
       var pc = g_RTCPeerConnections[token];
       
-      pc.addStream(localMediaStream);
+      if (localMediaStream) { pc.addStream(localMediaStream); }
       var offerSuccessCallback = function(sessionDescription) {
         pc.setLocalDescription(sessionDescription,
                                function(evt){},
@@ -228,9 +233,13 @@ joinRoom(myToken, room, function(members){
                    "sessionDescription": sessionDescription};
         sendSignal([token], msg);
       };
-      pc.createOffer(offerSuccessCallback, function(err){
-        console.log(err);
-        });        
+      var sdpc = {"mandatory": {
+                    "OfferToReceiveAudio":true,
+                    "OfferToReceiveVideo":true }};
+      pc.createOffer(offerSuccessCallback,
+                     function(err){ console.log(err); },
+                     sdpc // allow no-webcam users to be at least a receiver
+                     );        
     })(i);
   }
   
