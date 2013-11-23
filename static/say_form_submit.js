@@ -1,24 +1,14 @@
 $(document).ready(function() {
 
-$("#screen_name").val(localStorage["screen_name"]);
-// Submit form when enter is pressed
-$('#msg').keydown(function(e){
-//  if (e.keyCode == 13) { $('#say_form').submit(); }
-});
-
-$("#say_form").submit(function(){
-  if (typeof g_source == "undefined") { return false; }
-  if (g_source.readyState != EventSource.OPEN) { return false; }
-  if (typeof g_username == "undefined") { return false; }
+document.querySelector("#say_form").onsubmit = function(evt){
+  evt.preventDefault(); // disable the default form submission action
+  if (typeof g_source == "undefined") { return; }
+  if (g_source.readyState != EventSource.OPEN) { return; }
+  if (typeof g_username == "undefined") { return; }
   if ((typeof g_latitude == "undefined") &&
-      (typeof g_longitude == "undefined")) { return false; }
-  // We allow users to continuously send message for now.
-  // if ($("#say-btn").prop("disabled")) { return false; }
-  var msg = $("#msg").val();
-  if ($("#screen_name").val()) {
-    localStorage["screen_name"] = $("#screen_name").val();
-    msg = $("#screen_name").val() + ": " + msg;
-  }
+      (typeof g_longitude == "undefined")) { return; }
+      
+  var msg = document.querySelector("#msg").value;
   var data      = {
     username:  g_username,
     msg:       msg,
@@ -26,13 +16,11 @@ $("#say_form").submit(function(){
     longitude: g_longitude,
     skipSelf: true,
   };
-  $("#say-btn").button("loading");
-  postHTTP($("#say_form").attr("action"), data, function(req){
+  postHTTP(document.querySelector("#say_form").action, data, function(req){
     if (req.readyState != 4) { return; }
     if (req.status != 200) { console.log("HTTP POST error:", req); }
-    $("#say-btn").button("reset");
   });
-  $("#msg").val("");
+  document.querySelector("#msg").value = "";
 
   // Animations
   // We add a dummy marker into markers to create an illusion
@@ -75,7 +63,6 @@ $("#say_form").submit(function(){
         document.getElementById("msg").placeholder ="Say something to the world?";
         $(this).remove();
     });
-  return false; // disable the default form submission action
-}); // $("#say_form").submit
+}; // document.querySelector("#say_form").onsubmit
 
 }); // $(document).ready
