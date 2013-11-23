@@ -226,7 +226,7 @@ function postVideoChat() {
   var room = randomString(10);
   var data      = {
     username:  g_username,
-    msg:       "https://geochat-awaw.rhcloud.com/webrtc?room=" + room,
+    msg:       "https://" + document.location.host + "/webrtc?room=" + room,
     latitude:  g_latitude,
     longitude: g_longitude,
   };

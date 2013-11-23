@@ -39,8 +39,6 @@ var controllerData = {{.}};
 console.log("controllerData", controllerData);
 var room = controllerData["Room"];
 
-mediaConstraints = {video: true};
-
 function sendSignal(destinations, message) {
   var body = JSON.stringify(message);
   var data = {"destinations": destinations, "body": body}
@@ -141,14 +139,17 @@ function createSignalChannel(callback) {
 
 // For some reason, in Android, the setTimeout is needed...
 function playVideo(video) {
-  setTimeout(function(){ video.play() }, 50);
+  setTimeout(function(){ video.play() }, 1000);
 }
 
 // pc is a RTCPeerConnection
 function getLocalMedia(callback) {
+  mediaConstraints = {video: true, audio: true};
+
   function getUserMediaSuccess(localMediaStream) {
     window.localMediaStream = localMediaStream;
     var video = document.querySelector("#localvideo");
+    video.muted = true; // mute local sound to avoid feedback echoes.
     video.src = window.URL.createObjectURL(localMediaStream);
     playVideo(video);
     
