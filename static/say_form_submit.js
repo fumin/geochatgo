@@ -9,9 +9,10 @@ document.querySelector("#say_form").onsubmit = function(evt){
       (typeof g_longitude == "undefined")) { return; }
       
   var msg = document.querySelector("#msg").value;
+  var username_and_msg = decorate_with_username(msg);
   var data      = {
     username:  g_username,
-    msg:       msg,
+    msg:       username_and_msg,
     latitude:  g_latitude,
     longitude: g_longitude,
     skipSelf: true,
@@ -66,3 +67,8 @@ document.querySelector("#say_form").onsubmit = function(evt){
 }; // document.querySelector("#say_form").onsubmit
 
 }); // $(document).ready
+
+function decorate_with_username(msg) {
+  var username = localStorage.getItem("username");
+  return username + ": " + msg;
+};

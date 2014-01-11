@@ -220,7 +220,43 @@ g_map.on('moveend', debounce(function(e) {
   updateMapbounds(g_username, mapBounds);
 }, 5000));
 
+settingsControl.addTo(g_map);
+var username = localStorage.getItem("username");
+if (username.length == 0) {
+  $('#settingsModal').modal('toggle');
+}
+
 }); // $(document).ready
+
+SettingsControl = L.Control.extend({
+  options: {
+    position: 'topright'
+  },
+
+  onAdd: function(map) {
+    var container = L.DomUtil.create('div', name + 'geochat-control-settings');
+    this._settingsBtn = L.DomUtil.create('a', 'geochat-control-settings-btn', container);
+    this._settingsBtn.innerHTML = '<span class="glyphicon glyphicon-cog"></span>';
+    this._settingsBtn.title = 'settings';
+    this._settingsBtn.href = '#';
+    var stop = L.DomEvent.stopPropagation;
+    L.DomEvent.on(this._settingsBtn, 'click', stop)
+              .on(this._settingsBtn, 'mousedown', stop)
+		      .on(this._settingsBtn, 'dblclick', stop)
+		      .on(this._settingsBtn, 'click', L.DomEvent.preventDefault)
+		      .on(this._settingsBtn, 'click', this._handleClick, this);
+ 
+    return container;
+  },
+  
+  _handleClick: function(e) {
+    var username = localStorage.getItem("username");
+    document.querySelector("#settings-username").value = username;
+    
+    $('#settingsModal').modal('toggle');
+  },
+});
+var settingsControl = new SettingsControl();
 
 function postVideoChat() {
   var room = randomString(10);
@@ -235,4 +271,10 @@ function postVideoChat() {
     if (req.status != 200) { console.log("HTTP POST error:", req); }
     window.open(data.msg, "_blank");
   });
-}
+};
+
+function saveSettings() {
+  var username = document.querySelector("#settings-username").value;
+  localStorage.setItem("username", username);
+  $('#settingsModal').modal('toggle');
+};

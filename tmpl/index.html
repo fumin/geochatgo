@@ -7,8 +7,8 @@
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 
   <!-- Latest Bootstrap from CDN -->
-  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0-wip/css/bootstrap.min.css">
-  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0-wip/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
 
   {{if true}}
   <script src="static/vendor/leaflet/leaflet-0.7/leaflet-src.js"></script>
@@ -65,6 +65,24 @@
     </form>
     <a id="videochat" href="#" onclick="postVideoChat(); return false;">video chat</a>
   </div>
+  
+  <!-- Modal -->
+  <div class="modal fade" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="myModalLabel">Settings</h4>
+        </div>
+        <div class="modal-body">
+          <div><input type="text" id= "settings-username" placeholder="Your name"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" onclick="saveSettings(); return false;">OK</button>
+        </div>
+      </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /.modal -->
   
   <div id="historical-arena"></div>
   <div id="location-instructions" style="display: none;">
