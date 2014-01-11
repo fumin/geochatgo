@@ -222,7 +222,7 @@ g_map.on('moveend', debounce(function(e) {
 
 settingsControl.addTo(g_map);
 var username = localStorage.getItem("username");
-if (username.length == 0) {
+if (username == null || username.length == 0) {
   $('#settingsModal').modal('toggle');
 }
 

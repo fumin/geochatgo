@@ -53,15 +53,12 @@
          the code doing the real POST is in main.js -->
     <form accept-charset="UTF-8" action="/say" method="post"
           class="form-inline" id="say_form">
-      <!-- /%div{ style: "width: 20%; float: left"} -->
-      <!-- /  = text_field_tag :screen_name, nil, placeholder: "(留白匿名)" -->
-      <!-- /%div{ style: "width: 3%; float: left; text-align: center;"}: -->
       <div style='width: 100%; float: left'>
         <input type="text" name="msg" id="msg" autofocus="autofocus"
                placeholder="You haven't authorized geolocation."/>
       </div>
-      <button type="submit" name="button" id="say-btn" class="btn"
-              data-loading-text="Loading...">GO</button>
+      <!-- <button type="submit" name="button" id="say-btn" class="btn"
+              data-loading-text="Loading...">GO</button> -->
     </form>
     <a id="videochat" href="#" onclick="postVideoChat(); return false;">video chat</a>
   </div>
