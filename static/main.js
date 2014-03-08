@@ -67,9 +67,9 @@ function updateMapbounds(username, mapBounds) {
 $(document).ready(function() {
 
 g_map = L.map("map");
-L.tileLayer('http://{s}.tile.cloudmade.com/BC9A493B41014CAABB98F0471D759707/1714/256/{z}/{x}/{y}.png', {
+L.tileLayer('http://otile3.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
   maxZoom: 18,
-  attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>'
+  attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>, Imagery © <a href="http://www.mapquest.com/">mapquest</a>'
 }).addTo(g_map);
 g_map.setView([25.041846, 121.539001], 13); // Initialize map to Taipei
 L.control.scale().addTo(g_map);
