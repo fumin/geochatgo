@@ -166,7 +166,7 @@ L:
 			}
 			err := sse.Write(msg.content)
 			if err != nil {
-				break L
+				sse.StopTicker <- true
 			}
 		case <-sse.ConnClosed:
 			break L
