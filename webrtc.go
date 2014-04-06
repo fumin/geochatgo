@@ -6,6 +6,9 @@ import (
 	"html/template"
 	"net/http"
 	"sync"
+	"time"
+
+	"github.com/fumin/webutil"
 )
 
 type roomMap struct {
@@ -63,7 +66,7 @@ func webrtc(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("kkk")
 	room := r.FormValue("room")
 	if room == "" {
-		room = string(randByteSlice())
+		room = string(webutil.RandByteSlice())
 	}
 
 	t, _ := template.ParseFiles("tmpl/webrtc.html")
@@ -76,7 +79,7 @@ func webrtc(w http.ResponseWriter, r *http.Request) {
 }
 
 func webrtcJoin(w http.ResponseWriter, r *http.Request) {
-	parser := paramParser{R: r, W: w}
+	parser := webutil.ParamParser{R: r, W: w}
 	token := parser.RequiredStringParam("token")
 	room := parser.RequiredStringParam("room")
 	if parser.Err != nil {
@@ -85,7 +88,7 @@ func webrtcJoin(w http.ResponseWriter, r *http.Request) {
 
 	members := g_roomMap.enterRoom(token, room)
 
-	jsonResp(w, map[string]interface{}{"members": members})
+	webutil.JsonResp(w, map[string]interface{}{"members": members})
 }
 
 func webrtcTransmitter(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +120,7 @@ func webrtcTransmitter(w http.ResponseWriter, r *http.Request) {
 const leaveMsg = "leave"
 
 func webrtcLeaveSource(w http.ResponseWriter, r *http.Request) {
-	parser := paramParser{R: r, W: w}
+	parser := webutil.ParamParser{R: r, W: w}
 	token := parser.RequiredStringParam("token")
 	if parser.Err != nil {
 		return
@@ -134,7 +137,7 @@ func webrtcLeaveSource(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func webrtcSource(w http.ResponseWriter, r *http.Request) {
-	token := string(randByteSlice())
+	token := string(webutil.RandByteSlice())
 	channel := make(chan recvMsg_t, 32)
 	g_webrtcMap.Lock()
 	g_webrtcMap.m[token] = channel
@@ -154,19 +157,20 @@ func webrtcSource(w http.ResponseWriter, r *http.Request) {
 		g_webrtcMap.Unlock()
 	}()
 
-	sse := NewServerSideEventWriter(w)
+	// Openshift proxy's keep-alive has a timeout of 15, we need to be shorter.
+	sse := webutil.NewServerSideEventWriter(w, "heartbeat", 10*time.Second)
+	defer sse.Close()
 	sse.Write([]byte(`{"type":"token", "token":"` + token + `"}`))
 L:
 	for {
 		select {
 		case msg := <-channel:
 			if msg.kind == leaveMsg {
-				sse.StopTicker <- true
-				continue
+				break L
 			}
 			err := sse.Write(msg.content)
 			if err != nil {
-				sse.StopTicker <- true
+				break L
 			}
 		case <-sse.ConnClosed:
 			break L

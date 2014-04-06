@@ -8,13 +8,18 @@ import (
 	"html/template"
 	"net/http"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/fumin/webutil"
 )
 
 func init() {
 	initConfig()
+
+	http.HandleFunc("/numgoroutine", numgoroutine)
 
 	// Experimental
 	http.HandleFunc("/webrtc", webrtc)
@@ -36,9 +41,9 @@ func init() {
 }
 
 func openPopup(w http.ResponseWriter, r *http.Request) {
-	parser := paramParser{R: r, W: w}
+	parser := &webutil.ParamParser{R: r, W: w}
 	username := parser.RequiredStringParam("username")
-	south, west, north, east := parser.requiredLatLngBoundsParam()
+	south, west, north, east := requiredLatLngBoundsParam(parser)
 	if parser.Err != nil {
 		return
 	}
@@ -52,11 +57,11 @@ func openPopup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResp(w, map[string]interface{}{"popupId": popupId})
+	webutil.JsonResp(w, map[string]interface{}{"popupId": popupId})
 }
 
 func closePopup(w http.ResponseWriter, r *http.Request) {
-	parser := paramParser{R: r, W: w}
+	parser := webutil.ParamParser{R: r, W: w}
 	username := parser.RequiredStringParam("username")
 	popupId := parser.RequiredStringParam("popupId")
 	if parser.Err != nil {
@@ -64,13 +69,13 @@ func closePopup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rTree.delPopup(username, popupId)
-	jsonResp(w, map[string]interface{}{"ok": true})
+	webutil.JsonResp(w, map[string]interface{}{"ok": true})
 }
 
 func updateMapbounds(w http.ResponseWriter, r *http.Request) {
-	parser := paramParser{R: r, W: w}
+	parser := &webutil.ParamParser{R: r, W: w}
 	username := parser.RequiredStringParam("username")
-	south, west, north, east := parser.requiredLatLngBoundsParam()
+	south, west, north, east := requiredLatLngBoundsParam(parser)
 	if parser.Err != nil {
 		return
 	}
@@ -85,7 +90,7 @@ func updateMapbounds(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonResp(w, map[string]interface{}{"ok": true})
+	webutil.JsonResp(w, map[string]interface{}{"ok": true})
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +100,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 }
 
 func stream(w http.ResponseWriter, r *http.Request) {
-	username := string(randByteSlice())
+	username := string(webutil.RandByteSlice())
 
 	// Insert client into Rtree with an map bounds [0, 0, 0.1, 0.1].
 	// The client will update the correct bounds after we inform her/his username.
@@ -103,9 +108,11 @@ func stream(w http.ResponseWriter, r *http.Request) {
 	rTree.insert(username, channel, [2]float64{0.0, 0.0}, [2]float64{0.1, 0.1})
 	defer rTree.del(username) // when the EventSource connection is lost.
 
+	// Openshift proxy's keep-alive has a timeout of 15, we need to be shorter.
+	sse := webutil.NewServerSideEventWriter(w, "heartbeat", 10*time.Second)
+	defer sse.Close()
 	// Inform client what her/his username is. Throughout the entire session,
 	// clients should use this string as the identifier of themselves.
-	sse := NewServerSideEventWriter(w)
 	err := sse.EventWrite("username", []byte(username))
 	if err != nil {
 		return
@@ -126,9 +133,9 @@ L:
 }
 
 func say(w http.ResponseWriter, r *http.Request) {
-	parser := paramParser{R: r, W: w}
+	parser := &webutil.ParamParser{R: r, W: w}
 	msg := parser.RequiredStringParam("msg")
-	lat, lng := parser.requiredLatLngParams("latitude", "longitude")
+	lat, lng := requiredLatLngParams(parser, "latitude", "longitude")
 	skipSelf := r.FormValue("skipSelf")
 	if parser.Err != nil {
 		return
@@ -168,7 +175,7 @@ func say(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	jsonResp(w, map[string]interface{}{"ok": true})
+	webutil.JsonResp(w, map[string]interface{}{"ok": true})
 }
 
 func chatlogs(w http.ResponseWriter, r *http.Request) {
@@ -183,7 +190,7 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	x, _ := strconv.Atoi(matches[2])
 	y, _ := strconv.Atoi(matches[3])
 
-	parser := paramParser{R: r, W: w}
+	parser := webutil.ParamParser{R: r, W: w}
 	limit := parser.OptionalIntParam("limit", 16)
 	if parser.Err != nil {
 		return
@@ -202,7 +209,7 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 	// w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	// w.Header().Set("Pragma", "no-cache")
 	// w.Header().Set("Expires", "0")
-	// w.Header().Set("ETag", string(randByteSlice()))
+	// w.Header().Set("ETag", string(webutil.RandByteSlice()))
 	//
 	// Openshift's cache is a bastard, it accepts only UTC time,
 	// when we explicitly stated that the local machine time is in EDT.
@@ -210,15 +217,19 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 
 	// Concatenate json strings by ourselves, should be fast than json.Marshall?
 	w.Header().Set("Content-Type", "application/json")
-	bw := &byteWriter{respWriter: w}
+	bw := &webutil.ByteWriter{RespWriter: w}
 	bw.Write([]byte{'['})
 	bw.Write([]byte(strings.Join(v, ",")))
 	bw.Write([]byte{']'})
 }
 
-func (parser *paramParser) requiredLatLngBoundsParam() (float64, float64, float64, float64) {
-	south, west := parser.requiredLatLngParams("south", "west")
-	north, east := parser.requiredLatLngParams("north", "east")
+func numgoroutine(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(fmt.Sprintf(`{"numgoroutines":%d}`, runtime.NumGoroutine())))
+}
+
+func requiredLatLngBoundsParam(parser *webutil.ParamParser) (float64, float64, float64, float64) {
+	south, west := requiredLatLngParams(parser, "south", "west")
+	north, east := requiredLatLngParams(parser, "north", "east")
 	if parser.Err != nil {
 		return -200, -200, -200, -200
 	}
@@ -238,7 +249,7 @@ func (parser *paramParser) requiredLatLngBoundsParam() (float64, float64, float6
 	return south, west, north, east
 }
 
-func (parser *paramParser) requiredLatLngParams(latKey, lngKey string) (float64, float64) {
+func requiredLatLngParams(parser *webutil.ParamParser, latKey, lngKey string) (float64, float64) {
 	lat := parser.RequiredFloatParam(latKey)
 	lng := parser.RequiredFloatParam(lngKey)
 	if parser.Err != nil {

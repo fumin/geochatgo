@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/dhconnelly/rtreego"
 	"sync"
+
+  "github.com/fumin/webutil"
 )
 
 type recvMsg_t struct {
@@ -190,7 +192,7 @@ func newRtreegoRect(point, lengths [2]float64) *rtreego.Rect {
 
 func generateUniquePopupId(popups []*receiver_t) string {
 	for {
-		id := string(randByteSlice())
+		id := string(webutil.RandByteSlice())
 		index := indexOfPopupWithId(popups, id)
 		if index == -1 {
 			return id
