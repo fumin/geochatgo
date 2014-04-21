@@ -198,7 +198,7 @@ func chatlogs(w http.ResponseWriter, r *http.Request) {
 
 	conn := redisPool.Get()
 	defer conn.Close()
-	v, err := maptileRead(rediskeyTileChatlog, z, x, y, 0, limit, conn)
+	v, err := maptileRead(rediskeyTileChatlog, z, x, y, 0, int(limit), conn)
 	if err != nil {
 		glog.Warningf("%v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
